@@ -14,6 +14,7 @@ namespace pvdb {
 enum Control {
     MOVE_EAST,  MOVE_UP,   MOVE_NORTH,
     MOVE_WEST,  MOVE_DOWN, MOVE_SOUTH,
+    HIGH_SPEED,
     LOCK_MOUSE,
     MAX
 };
@@ -28,16 +29,18 @@ static constexpr Keybinds DefaultKeybindings = [](){
     b[MOVE_WEST] = KEY_A;
     b[MOVE_UP] = KEY_SPACE;
     b[MOVE_DOWN] = KEY_LSHIFT;
+    b[HIGH_SPEED] = KEY_LALT;
     b[LOCK_MOUSE] = KEY_BACKSPACE;
     return b;
 }();
 
 struct DebugController {
-    float       speed{0.05f};
+    float       speed{10.0f};
+    float       speed_modifier{200.0f};
     float       sensitivity{0.05f};
     Keybinds    keys = DefaultKeybindings;
     FPSCamera   cam{};
-    i32         dir[6]{};
+    i32         dir[7]{};
     bool        mouse_locked{};
 
     void on_mouse_move(i32 move_x, i32 move_y) {
@@ -46,7 +49,7 @@ struct DebugController {
 
     void on_key(gpu::DebugDevice& device, i32 k, bool pressed) {
         if (pressed && k == keys[LOCK_MOUSE]) { mouse_locked = !mouse_locked; device.lock_mouse(mouse_locked); return; }
-        for (u32 i = 0; i < 6; ++i) {
+        for (u32 i = 0; i < 7; ++i) {
             if (pressed)
                 dir[i] |= int(k == keys[i]);
             else
@@ -55,7 +58,8 @@ struct DebugController {
     }
 
     void update(float dt) {
-        cam.move((vec3(ivec3(dir[0], dir[1], dir[2])) - vec3(ivec3(dir[3], dir[4], dir[5]))) * speed * dt);
+        const auto s = speed + float(dir[6]) * speed_modifier;
+        cam.move((vec3(ivec3(dir[0], dir[1], dir[2])) - vec3(ivec3(dir[3], dir[4], dir[5]))) * s * dt);
     }
 };
 

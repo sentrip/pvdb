@@ -250,7 +250,8 @@ pvdb_ray_box_intersect(
     vec3                    bbox_min,
     vec3                    bbox_max,
     PVDB_INOUT(float)       tmin,
-    PVDB_INOUT(float)       tmax)
+    PVDB_INOUT(float)       tmax,
+    PVDB_INOUT(ivec3)       dir)
 {
     vec3 dir_inv = vec3(1.0f) / ray.dir;
     vec3 t0 = (bbox_min - ray.pos) * dir_inv;
@@ -262,6 +263,7 @@ pvdb_ray_box_intersect(
     bool hit = tnear <= tfar;
     tmin = max(tmin, tnear);
     tmax = min(tmax, tfar);
+    dir = ivec3(int(tnear == tmin3.x), int(tnear == tmin3.y), int(tnear == tmin3.z));
     return hit;
 }
 
@@ -290,7 +292,7 @@ pvdb_ray_hit_normal(
 //region dda
 
 #define PVDB_DDA_FLT_MAX        3.402823466e+38
-#define PVDB_DDA_FLT_MIN        0.01
+#define PVDB_DDA_FLT_MIN        0.001
 
 #ifdef PVDB_C
 struct pvdb_dda;

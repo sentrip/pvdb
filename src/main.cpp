@@ -53,6 +53,9 @@ int main() {
 #include "cvdb/Runtime.h"
 #include "cvdb/Camera.h"
 #include "cvdb/Debug.h"
+#include "pvdb/pvdb_raycast.h"
+
+#include <chrono>
 
 int main() {
     pvdb::gpu::DebugDevice device{};
@@ -76,8 +79,11 @@ int main() {
 
     device.swapchain.render.waits_for(rt.last_submit(), pvdb::gpu::PipelineStage::COLOR_OUTPUT);
 
+    auto prev_time = std::chrono::high_resolution_clock::now();
     while (!device.should_quit()) {
-        ct.update(1.0f);
+        auto now = std::chrono::high_resolution_clock::now();
+        ct.update(float(double(std::chrono::duration_cast<std::chrono::microseconds>(now - prev_time).count())/1000000.0));
+        prev_time = now;
         rt.camera().update(ct.cam.view, ct.cam.proj);
         rt.context().update();
         if (auto i = device.acquire_image(rt.context()); i != UINT32_MAX) {

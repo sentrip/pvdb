@@ -9,6 +9,8 @@
 #include "../pvdb/pvdb_tree_write.h"
 #include "../pvdb/pvdb_raycast.h"
 
+#define PRECISE
+//#define CASE1
 
 TEST_CASE("pvdb_raycast", "[pvdb]")
 {
@@ -26,13 +28,32 @@ TEST_CASE("pvdb_raycast", "[pvdb]")
 
     pvdb_tree_init_allocator(tree, alloc, 25600000);
 
-    for (int x = 0; x <= 15; ++x)
-        for (int z = 0; z <= 15; ++z)
-            pvdb_set(tree, {x, 0, z}, 999u);
+#ifdef CASE1
+    pvdb_set(tree, {11, 1, 63}, 999u);
 
-    pvdb_ray ray{{0.73, 2.05, 0.46}, {-0.0008, 0.2729, 0.9620}};
+#ifdef PRECISE
+    pvdb_ray ray{{0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}};
+    ivec3 offset = ivec3(11,1,1);
+#else
+    pvdb_ray ray{{11.5, 1.5, 1.5}, {0.0, 0.0, 1.0}};
+    ivec3 offset = ivec3(0,0,0);
+#endif
+
+#else
+    pvdb_set(tree, {1, 1, 11}, 999u);
+
+#ifdef PRECISE
+    pvdb_ray ray{{0.5, 0.5, 0.5}, {0.0, 0.0, -1.0}};
+    ivec3 offset = ivec3(1,1,13);
+#else
+    pvdb_ray ray{{1.5, 1.5, 13.5}, {0.0, 0.0, -1.0}};
+    ivec3 offset = ivec3(0,0,0);
+#endif
+
+#endif
+
     pvdb_ray_hit hit;
-    if (pvdb_raycast(tree, ray, hit, ivec3(0,0,0))) {
+    if (pvdb_raycast(tree, ray, hit, offset)) {
         printf("HIT: t: %f, voxel: %u, normal: (%f, %f, %f)\n", hit.t, hit.voxel, hit.normal.x, hit.normal.y, hit.normal.z);
     } else {
         printf("MISS\n");

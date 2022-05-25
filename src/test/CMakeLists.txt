@@ -5,7 +5,7 @@ add_executable(pvdb_test
 #    test_pvdb_allocator.cpp
     test_pvdb_tree_read.cpp
     test_pvdb_tree_write.cpp
-#    test_pvdb_raycast.cpp
+    test_pvdb_raycast.cpp
     )
 pvdb_copy_gpu_sources_to_target_dir(pvdb_test)
 
