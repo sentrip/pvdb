@@ -127,6 +127,22 @@ inline U atomicMin(A& mem, U v)
     return prev;
 }
 
+template<typename A, typename U>
+inline U atomicOr(A& mem, U v)
+{
+    const U prev = mem;
+    mem |= v;
+    return prev;
+}
+
+template<typename A, typename U>
+inline U atomicAnd(A& mem, U v)
+{
+    const U prev = mem;
+    mem &= v;
+    return prev;
+}
+
 #endif
 
 #endif //PVDB_BUFFER_H

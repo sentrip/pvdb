@@ -7,7 +7,7 @@
 
 namespace pvdb {
 
-void Allocator::init(gpu_context ctx, gpu_cmd cmd, span<const pvdb_allocator_level> levels, u32 offset)
+void Allocator::init(gpu_context ctx, gpu_cmd cmd, span<const pvdb_allocator_level> levels, u32 offset, Device d)
 {
     uint max_allocations[PVDB_ALLOCATOR_MAX_LEVELS];
     pvdb_allocator_level levels_array[PVDB_ALLOCATOR_MAX_LEVELS];
@@ -19,7 +19,7 @@ void Allocator::init(gpu_context ctx, gpu_cmd cmd, span<const pvdb_allocator_lev
     const u32 alloc_buffer_size = pvdb_allocator_size(levels.size(), max_allocations);
 
     auto& buffer = *new (storage) gpu::Buffer;
-    buffer = ctx.create_buffer(alloc_buffer_size * sizeof(u32), gpu::BufferType::STORAGE, gpu::BufferUsage::GPU);
+    buffer = ctx.create_buffer(alloc_buffer_size * sizeof(u32), gpu::BufferType::STORAGE, d == DEVICE_GPU ? gpu::BufferUsage::GPU : gpu::BufferUsage::CPU);
 
     const u32 offset_bytes = alloc_size * sizeof(u32);
     cmd.update_buffer(buffer, 0, {(const u8*)alloc.data, offset_bytes});

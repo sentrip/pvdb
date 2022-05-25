@@ -7,9 +7,6 @@
 
 #define PVDB_C
 #define PVDB_ALLOCATOR_MASK
-//#define PVDB_USE_IMAGES
-#define PVDB_CHANNELS_LEAF  1u
-#define PVDB_CHANNELS_NODE  1u
 
 #include <cstdint>
 #include "tinystd_span.h"
@@ -37,6 +34,11 @@ struct Camera;
 struct Tree;
 struct Trees;
 struct Runtime;
+
+enum Device {
+    DEVICE_CPU,
+    DEVICE_GPU,
+};
 
 }
 

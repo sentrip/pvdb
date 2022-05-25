@@ -13,34 +13,7 @@
 #define PVDB_GLOBAL_TREE                    GlobalTree
 #endif
 
-#ifndef PVDB_GLOBAL_TREE_ATLAS
-#define PVDB_GLOBAL_TREE_ATLAS              GlobalTreeAtlas
-#endif
-
 #define pvdb_tree_at(tree, addr)                    pvdb_buf_at(pvdb_tree_data_nodes((tree).data), PVDB_GLOBAL_TREE, addr)
-
-#ifdef PVDB_USE_IMAGES
-#ifdef PVDB_C
-
-#define pvdb_atlas_begin(t, p)                      ((pvdb_atlas_offset_to_index(t, p) * pvdb_leaf_size(t)) + pvdb_coord_local_to_index(t, p, 0))
-#define pvdb_atlas_read(t, p)                       (pvdb_tree_data_atlas((t).data)[pvdb_atlas_begin(t, p)])
-#define pvdb_atlas_read_channel(t, p, c)            (pvdb_tree_data_atlas((t).data)[pvdb_atlas_begin(t, p) + ((c) * pvdb_dim3(t, 0))])
-static inline uvec4 pvdb_atlas_read_channels(pvdb_tree_in t, PVDB_IN(ivec3) p) {
-    uvec4 r{};
-    const uint leaf_dim3 = pvdb_dim3(t, 0);
-    const uint offset = pvdb_atlas_begin(t, p);
-    for (uint i = 0; i < PVDB_CHANNELS_LEAF; ++i) r[i] = t.data.atlas[offset + i * leaf_dim3];
-    return r;
-}
-
-#else
-
-#define pvdb_atlas_read(t, p)                       imageLoad(PVDB_GLOBAL_TREE_ATLAS[pvdb_tree_data_atlas((t).data)], p).x
-#define pvdb_atlas_read_channel(t, p, c)            imageLoad(PVDB_GLOBAL_TREE_ATLAS[pvdb_tree_data_atlas((t).data)], p)[c]
-#define pvdb_atlas_read_channels(t, p)              imageLoad(PVDB_GLOBAL_TREE_ATLAS[pvdb_tree_data_atlas((t).data)], p)
-
-#endif
-#endif
 
 //endregion
 
@@ -113,13 +86,8 @@ pvdb_read_leaf(
     uint                leaf,
     PVDB_IN(ivec3)      p)
 {
-#ifdef PVDB_USE_IMAGES
-    const ivec3 a = pvdb_atlas_index_to_offset(tree, leaf) + p;
-    return pvdb_atlas_read(tree, a);
-#else
     const uint i = pvdb_coord_local_to_index(tree, p, 0);
     return pvdb_tree_at(tree, leaf + pvdb_data_offset(tree, 0, i));
-#endif
 }
 
 
@@ -131,27 +99,9 @@ pvdb_read_leaf(
     PVDB_IN(ivec3)      p,
     uint                channel)
 {
-#ifdef PVDB_USE_IMAGES
-    const ivec3 a = pvdb_atlas_index_to_offset(tree, leaf) + p;
-    return pvdb_atlas_read_channel(tree, a, channel);
-#else
     const uint i = pvdb_coord_local_to_index(tree, p, 0);
     return pvdb_tree_at(tree, leaf + pvdb_data_offset_channel(tree, 0, i, channel));
-#endif
 }
-
-#ifdef PVDB_USE_IMAGES
-/// read value from leaf in all channels
-PVDB_INLINE uvec4
-pvdb_read_leaf_channels(
-    pvdb_tree_in        tree,
-    uint                leaf,
-    PVDB_IN(ivec3)      p)
-{
-    const ivec3 a = pvdb_atlas_index_to_offset(tree, leaf) + p;
-    return pvdb_atlas_read_channels(tree, a);
-}
-#endif
 
 //endregion
 
@@ -242,6 +192,18 @@ pvdb_traverse_at_least(
 
 //region get
 
+/// leaf mask at given global coord
+PVDB_INLINE bool
+pvdb_is_on(
+    pvdb_tree_in        tree,
+    PVDB_IN(ivec3)      p)
+{
+    const uint leaf = pvdb_traverse_at_least(tree, 0u, p);
+    if (leaf == PVDB_ROOT_NODE || pvdb_is_tile(leaf)) return (leaf & PVDB_NODE) != 0u;
+    return pvdb_read_node_mask(tree, leaf, pvdb_coord_global_to_index(tree, p, 0u));
+}
+
+
 /// leaf value at given global coord
 PVDB_INLINE uint
 pvdb_get(
@@ -265,20 +227,6 @@ pvdb_get(
     if (leaf == PVDB_ROOT_NODE || pvdb_is_tile(leaf)) return leaf & PVDB_NODE;
     return pvdb_read_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0u), channel);
 }
-
-
-#ifdef PVDB_USE_IMAGES
-/// leaf value at given global coord in all channels
-PVDB_INLINE uvec4
-pvdb_get_channels(
-    pvdb_tree_in        tree,
-    PVDB_IN(ivec3)      p)
-{
-    const uint leaf = pvdb_traverse_at_least(tree, 0u, p);
-    if (leaf == PVDB_ROOT_NODE || pvdb_is_tile(leaf)) return uvec4(leaf & PVDB_NODE, 0, 0, 0);
-    return pvdb_read_leaf_channels(tree, leaf, pvdb_coord_global_to_local(tree, p, 0u));
-}
-#endif
 
 //endregion
 

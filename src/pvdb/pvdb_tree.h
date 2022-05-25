@@ -14,19 +14,6 @@
 
 //region definitions
 
-#ifdef PVDB_USE_IMAGES
-
-/// user definitions
-#ifndef PVDB_CHANNELS_LEAF
-#define PVDB_CHANNELS_LEAF 1
-#endif
-
-#ifndef PVDB_CHANNELS_NODE
-#define PVDB_CHANNELS_NODE 1
-#endif
-
-#endif
-
 /// globals
 #define PVDB_MAX_TREES                  8
 #define PVDB_MAX_LEVELS                 8
@@ -41,20 +28,10 @@
 #define PVDB_TOTAL_LOG2DIM_MASK         0xffu
 #define PVDB_LOG2DIM_SHIFT              2u
 #define PVDB_TOTAL_LOG2DIM_SHIFT        3u
-#define PVDB_ATLAS_LOG2DIM_MASK         0xffu
-#define PVDB_ATLAS_LOG2DIM_SHIFT        8u
-
-#ifndef PVDB_USE_IMAGES
 #define PVDB_CHANNELS_MASK              0x3u
 #define PVDB_CHANNELS_SHIFT             1u
 #define PVDB_LEVELS_MASK                0xfu
 #define PVDB_LEVELS_SHIFT               8u
-#endif
-
-/// tree atlas
-#define PVDB_ATLAS_LOG2DIM              8u
-#define PVDB_ATLAS_DIM                  256u
-#define PVDB_ATLAS_DIM_MAX              255u
 
 
 #ifdef PVDB_C
@@ -67,10 +44,9 @@ typedef PVDB_IN(pvdb_access)            pvdb_access_in;
 typedef PVDB_OUT(pvdb_access)           pvdb_access_out;
 typedef PVDB_INOUT(pvdb_access)         pvdb_access_inout;
 
-struct pvdb_tree_data                   { atom_t* nodes{}; atom_t* alloc{}; atom_t* atlas{}; };
+struct pvdb_tree_data                   { atom_t* nodes{}; atom_t* alloc{}; };
 #define pvdb_tree_data_nodes(d)         (d).nodes
 #define pvdb_tree_data_alloc(d)         (d).alloc
-#define pvdb_tree_data_atlas(d)         (d).atlas
 
 #else
 #define pvdb_tree_in                    PVDB_IN(pvdb_tree)
@@ -82,7 +58,6 @@ struct pvdb_tree_data                   { atom_t* nodes{}; atom_t* alloc{}; atom
 #define pvdb_tree_data                  uint
 #define pvdb_tree_data_nodes(d)         d
 #define pvdb_tree_data_alloc(d)         d
-#define pvdb_tree_data_atlas(d)         d
 
 #endif
 
@@ -92,14 +67,10 @@ struct pvdb_tree_data                   { atom_t* nodes{}; atom_t* alloc{}; atom
 
 /// tree
 struct pvdb_tree {
-#ifdef PVDB_USE_IMAGES
-    uint            levels;
-#else
     uint            levels_channels_array;
-#endif
     uint            log2dim_array;
     uint            total_log2dim_array[2];
-    uint            atlas_log2dim_array;
+    uint            PAD;
     pvdb_tree_data  data;
 };
 
@@ -113,14 +84,8 @@ struct pvdb_node_header {
 
 
 /// dimension math
-#ifdef PVDB_USE_IMAGES
-#define pvdb_levels(t)                             ((t).levels)
-#define pvdb_channels(t, lvl)                      ( (lvl) == 0u ? PVDB_CHANNELS_LEAF : PVDB_CHANNELS_NODE )
-#else
 #define pvdb_levels(t)                             ((t).levels_channels_array & PVDB_LEVELS_MASK)
 #define pvdb_channels(t, lvl)                      ( ( (t).levels_channels_array >> (PVDB_LEVELS_SHIFT + ((lvl)<<PVDB_CHANNELS_SHIFT)) ) & PVDB_CHANNELS_MASK )
-#endif
-
 #define pvdb_root(t)                               (pvdb_levels(t) - 1u)
 #define pvdb_log2dim(t, lvl)                       ( ( (t).log2dim_array >> ((lvl)<<PVDB_LOG2DIM_SHIFT) ) & PVDB_LOG2DIM_MASK )
 #define pvdb_total_log2dim(t, lvl)                 ( ( (t).total_log2dim_array[((lvl)<<PVDB_TOTAL_LOG2DIM_SHIFT)>>5u] >> ((lvl)<<PVDB_TOTAL_LOG2DIM_SHIFT) ) & PVDB_TOTAL_LOG2DIM_MASK )
@@ -144,21 +109,6 @@ struct pvdb_node_header {
 #define pvdb_node_size(t, lvl)                      (pvdb_data_offset(t, lvl, 0) + (pvdb_dim3(t, lvl) * pvdb_channels(t, lvl)))
 #define pvdb_leaf_size(t)                           (pvdb_dim3(t, 0) * pvdb_channels(t, 0))
 
-#ifdef PVDB_USE_IMAGES
-/// atlas math
-#define pvdb_atlas_log2dim_xy(t)                    ((t).atlas_log2dim_array & PVDB_ATLAS_LOG2DIM_MASK)
-#define pvdb_atlas_log2dim_z(t)                     (((t).atlas_log2dim_array >> PVDB_ATLAS_LOG2DIM_SHIFT) & PVDB_ATLAS_LOG2DIM_MASK)
-#define pvdb_atlas_dim_xy(t)                        (1u << pvdb_atlas_log2dim_xy(t))
-#define pvdb_atlas_dim_z(t)                         (1u << pvdb_atlas_log2dim_z(t))
-#define pvdb_atlas_dim3(t)                          (1u << ((2u * pvdb_atlas_log2dim_xy(t)) + pvdb_atlas_log2dim_z(t)))
-
-#define pvdb_atlas_leaf_log2dim_xy(t)               (((t).atlas_log2dim_array >> (2u*PVDB_ATLAS_LOG2DIM_SHIFT)) & PVDB_ATLAS_LOG2DIM_MASK)
-#define pvdb_atlas_leaf_log2dim_z(t)                (((t).atlas_log2dim_array >> (3u*PVDB_ATLAS_LOG2DIM_SHIFT)) & PVDB_ATLAS_LOG2DIM_MASK)
-#define pvdb_atlas_leaf_dim_xy(t)                   (1u << pvdb_atlas_leaf_log2dim_xy(t))
-#define pvdb_atlas_leaf_dim_z(t)                    (1u << pvdb_atlas_leaf_log2dim_z(t))
-#define pvdb_atlas_leaf_dim3(t)                     (1u << ((2u * pvdb_atlas_leaf_log2dim_xy(t)) + pvdb_atlas_leaf_log2dim_z(t)))
-#endif
-
 
 /// NOTE: you must call pvdb_allocate_node(tree, pvdb_root(tree)) after initializing to prepare the tree correctly
 ///  This call is not included here to avoid requiring access to write functions in order to include this file
@@ -167,19 +117,10 @@ pvdb_tree_init(
     pvdb_tree_inout         tree,
     uint                    levels,
     PVDB_ARRAY_IN(uint,     log2dim, PVDB_MAX_LEVELS),
-    #ifdef PVDB_USE_IMAGES
-    uint                    leaf_count_log2dim
-    #else
-    PVDB_ARRAY_IN(uint,     channels, PVDB_MAX_LEVELS)
-    #endif
-    )
+    PVDB_ARRAY_IN(uint,     channels, PVDB_MAX_LEVELS))
 {
     PVDB_ASSERT(levels <= PVDB_MAX_LEVELS && "too many levels");
-#ifdef PVDB_USE_IMAGES
-    tree.levels = levels;
-#else
     tree.levels_channels_array = levels;
-#endif
     tree.log2dim_array = 0;
     tree.total_log2dim_array[0] = 0;
     tree.total_log2dim_array[1] = 0;
@@ -188,19 +129,8 @@ pvdb_tree_init(
         tree.log2dim_array |= (log2dim[level] << (level << PVDB_LOG2DIM_SHIFT));
         total += log2dim[level];
         tree.total_log2dim_array[(level << PVDB_TOTAL_LOG2DIM_SHIFT) >> 5u] |= (total << (level << PVDB_TOTAL_LOG2DIM_SHIFT));
-        #ifndef PVDB_USE_IMAGES
         tree.levels_channels_array |= (channels[level] << (PVDB_LEVELS_SHIFT + (level << PVDB_CHANNELS_SHIFT)));
-        #endif
     }
-    #ifdef PVDB_USE_IMAGES
-    const uint atlas_max_leaf_log2dim_z = PVDB_ATLAS_LOG2DIM - log2dim[0];
-    const uint atlas_leaf_log2dim_z = min(atlas_max_leaf_log2dim_z, leaf_count_log2dim);
-    const uint atlas_leaf_log2dim_xy = (leaf_count_log2dim - atlas_leaf_log2dim_z) >> 1u;
-    tree.atlas_log2dim_array = (atlas_leaf_log2dim_xy + log2dim[0]);
-    tree.atlas_log2dim_array |= (atlas_leaf_log2dim_z + log2dim[0]) << PVDB_ATLAS_LOG2DIM_SHIFT;
-    tree.atlas_log2dim_array |= (atlas_leaf_log2dim_xy) << (2u * PVDB_ATLAS_LOG2DIM_SHIFT);
-    tree.atlas_log2dim_array |= (atlas_leaf_log2dim_z) << (3u * PVDB_ATLAS_LOG2DIM_SHIFT);
-    #endif
 }
 
 
@@ -244,41 +174,6 @@ pvdb_coord_global_to_index(
     const ivec3 local = pvdb_coord_global_to_local(tree, p, level);
     return pvdb_coord_local_to_index(tree, local, level);
 }
-
-
-#ifdef PVDB_USE_IMAGES
-/// atlas index -> atlas offset
-PVDB_INLINE ivec3
-pvdb_atlas_index_to_offset(
-    pvdb_tree_in            tree,
-    uint                    leaf)
-{
-    const uint leaf_log2dim = pvdb_log2dim(tree, 0);
-    const uint atlas_log2dim_xy = pvdb_atlas_log2dim_xy(tree);
-    const uint log2dim = atlas_log2dim_xy - leaf_log2dim;
-    const uint max_dim = (1u << log2dim) - 1u;
-    return ivec3(
-        int(leaf & max_dim),
-        int((leaf >> log2dim) & max_dim),
-        int(leaf >> (2u * log2dim))
-    ) << int(leaf_log2dim);
-}
-
-
-/// atlas offset -> atlas index
-PVDB_INLINE uint
-pvdb_atlas_offset_to_index(
-    pvdb_tree_in            tree,
-    PVDB_IN(ivec3)          offset)
-{
-    const uint leaf_log2dim = pvdb_log2dim(tree, 0);
-    const uint atlas_log2dim_xy = pvdb_atlas_log2dim_xy(tree);
-    const uint log2dim = atlas_log2dim_xy - leaf_log2dim;
-    const ivec3 local = offset >> int(leaf_log2dim);
-    return uint(local.z << int(2u * log2dim)) + uint(local.y << int(log2dim)) + uint(local.x);
-}
-
-#endif
 
 
 /// global -> local[]
@@ -359,6 +254,8 @@ pvdb_access_set(
 
 //endregion
 
+//region debug nodes
+
 #ifdef PVDB_C
 
 template<uint Log2Dim>
@@ -384,5 +281,7 @@ static inline void pvdb_debug_nodes()
 }
 
 #endif
+
+//endregion
 
 #endif //PVDB_TREE_H

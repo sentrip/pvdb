@@ -47,14 +47,14 @@ struct DebugFill : Subpass {
             push_const(queue[i]);
             auto& tree = (*trees)[uint(queue[i].offset_tree.w)];
             tree.push_const(ctx(), cmd, sizeof(FillData));
-            cmd.dispatch(u32(global_size.x), u32(1), u32(global_size.z));
+            cmd.dispatch(u32(global_size.x), u32(global_size.y), u32(global_size.z));
         }
         count = 0;
     }
 
-    static constexpr ivec3 LOCAL_SIZE = ivec3(16);
+    static constexpr ivec3 LOCAL_SIZE = ivec3(8);
     static constexpr const char* SRC = R"(#version 450
-layout(local_size_x = LOCAL_SIZE, local_size_y = 1, local_size_z = LOCAL_SIZE) in;
+layout(local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = LOCAL_SIZE) in;
 
 #include "pvdb/pvdb.glsl"
 

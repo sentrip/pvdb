@@ -7,20 +7,15 @@
 #define PVDB_C
 #include "../pvdb/pvdb_tree_read.h"
 
-template<uint NWords, uint NWordsAtlas, uint NLevels>
-pvdb_tree make_test_tree_read(pvdb_buf_t<NWords>& buf, pvdb_buf_t<NWordsAtlas>& buf_atlas, PVDB_ARRAY_IN(uint, log2dim, NLevels))
+template<uint NWords, uint NLevels>
+pvdb_tree make_test_tree_read(pvdb_buf_t<NWords>& buf, PVDB_ARRAY_IN(uint, log2dim, NLevels))
 {
     pvdb_tree tree{};
     tree.data.nodes = buf;
-    tree.data.atlas = buf_atlas;
     uint l2[PVDB_MAX_LEVELS]{};
     uint ch[PVDB_MAX_LEVELS]{1,1,1,1,1,1,1,1};
     for (uint i = 0; i < NLevels; ++i) l2[i] = log2dim[i];
-    #ifdef PVDB_USE_IMAGES
-    pvdb_tree_init(tree, NLevels, l2, 0u);
-    #else
     pvdb_tree_init(tree, NLevels, l2, ch);
-    #endif
     return tree;
 }
 
@@ -28,8 +23,8 @@ pvdb_tree make_test_tree_read(pvdb_buf_t<NWords>& buf, pvdb_buf_t<NWordsAtlas>& 
 template<uint NLevels>
 void test_pvdb_coord_math(PVDB_ARRAY_IN(uint, log2dim, NLevels))
 {
-    pvdb_buf_t<8> data{}, atlas{};
-    auto tree = make_test_tree_read(data, atlas, log2dim);
+    pvdb_buf_t<8> data{};
+    auto tree = make_test_tree_read(data, log2dim);
 
     // Get max coord and coord that is 1,1,1 in local space at every level
     ivec3 max{1,1,1}, all_one{};
@@ -61,8 +56,8 @@ void test_pvdb_traverse(PVDB_ARRAY_IN(uint, log2dim, NLevels))
 {
     constexpr uint VALUE = 999u;
 
-    pvdb_buf_t<64000> data{}, atlas{};
-    auto tree = make_test_tree_read(data, atlas, log2dim);
+    pvdb_buf_t<64000> data{};
+    auto tree = make_test_tree_read(data, log2dim);
 
     // Beginning of tree reserved for root node
     uint offset = pvdb_node_size(tree, pvdb_root(tree));

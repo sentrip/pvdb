@@ -240,7 +240,7 @@ pvdb_allocator_size(
     uint                n_levels,
     PVDB_ARRAY_IN(uint, max_allocations, PVDB_ALLOCATOR_MAX_LEVELS))
 {
-    return 2u + n_levels * 2u;
+    return 1u + n_levels * 2u;
 }
 
 
@@ -256,10 +256,9 @@ pvdb_allocator_init_level(
     PVDB_INOUT(uint)    implementation_offset)
 {
     pvdb_alloc_at(alloc, 0u) = 0u;
-    pvdb_alloc_at(alloc, 1u) = 0u;
-    pvdb_alloc_at(alloc, 2u + (index * 2u)) = block_size;
-    pvdb_alloc_at(alloc, 2u + (index * 2u) + 1u) = data_offset;
-    offset += 2u + 2u * uint(index == 0u);
+    pvdb_alloc_at(alloc, 1u + (index * 2u)) = block_size;
+    pvdb_alloc_at(alloc, 1u + (index * 2u) + 1u) = data_offset;
+    offset += 2u + uint(index == 0u);
 }
 
 
@@ -268,13 +267,9 @@ pvdb_allocator_alloc(
     pvdb_buf_inout      alloc,
     uint                index)
 {
-    const uint block_size = pvdb_alloc_at(alloc, 2u + (index * 2u));
-    const uint data_offset = pvdb_alloc_at(alloc, 2u + (index * 2u) + 1u);
-#ifdef PVDB_USE_IMAGES
-    const uint n = atomicAdd(pvdb_alloc_at(alloc, uint(index == 0)), block_size);
-#else
+    const uint block_size = pvdb_alloc_at(alloc, 1u + (index * 2u));
+    const uint data_offset = pvdb_alloc_at(alloc, 1u + (index * 2u) + 1u);
     const uint n = atomicAdd(pvdb_alloc_at(alloc, 0u), block_size);
-#endif
 //    PVDB_PRINTF("\n\t ALLOC: level: %u, block_size: %u, data_offset: %u -> ptr: %u\n", index, block_size, data_offset, data_offset + n * block_size);
     return data_offset + n;
 }

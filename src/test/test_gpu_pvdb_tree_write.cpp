@@ -59,11 +59,7 @@ struct TestSetData {
         ctx.setup();
 
         auto setup = ctx.begin_setup();
-#ifdef PVDB_USE_IMAGES
-        ti = trees.create(setup, {100'000'000, 3, {3, 4, 5}, 18u});
-#else
         ti = trees.create(setup, {100'000'000, 3, {3, 4, 5}});
-#endif
         ctx.end_setup();
         ctx.wait_setup();
 

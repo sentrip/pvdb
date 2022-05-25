@@ -9,7 +9,7 @@
 #include "pvdb_math.h"
 
 
-#define PVDB_RAYCAST_MAX_ITER   128
+#define PVDB_RAYCAST_MAX_ITER   256
 
 
 struct pvdb_ray_hit {
@@ -39,10 +39,9 @@ pvdb_raycast_leaf(
            && dda.p.x >= 0 && dda.p.y >= 0 && dda.p.z >= 0
            && dda.p.x < dim && dda.p.y < dim && dda.p.z < dim)
    {
-        const uint v = pvdb_read_leaf(tree, node, dda.p);
-        if (v != 0u) {
-//            PVDB_PRINTF("LEAF: node: %u, pos: (%d, %d, %d) - HIT\n", node, dda.p.x, dda.p.y, dda.p.z);
-            hit.voxel = v;
+        const uint i = pvdb_coord_local_to_index(tree, dda.p, 0);
+        if (pvdb_read_node_mask(tree, node, i)) {
+            hit.voxel = pvdb_read_node(tree, 0, node, i);
             hit.t = dda.t.x;
             hit.normal = pvdb_ray_hit_normal(ray.dir, ray.pos + ray.dir * dda.t.x, dda.p + node_pos);
 			return true;

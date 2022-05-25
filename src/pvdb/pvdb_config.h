@@ -10,8 +10,6 @@
 #ifndef PVDB_CONFIG_H
 #define PVDB_CONFIG_H
 
-//#define PVDB_USE_IMAGES
-
 /// constants
 #define PVDB_INT_MAX                0x7FFFFFFF
 #define PVDB_UINT_MAX               0xFFFFFFFFu
@@ -42,12 +40,7 @@
 /// GPU global bindings
 #define PVDB_BINDING_TREE               0
 #define PVDB_BINDING_TREE_ALLOC         1
-#ifdef PVDB_USE_IMAGES
-#define PVDB_BINDING_TREE_ATLAS         2
-#define PVDB_BINDING_CAMERA             3
-#else
 #define PVDB_BINDING_CAMERA             2
-#endif
 
 /// platform compatibility
 #ifndef PVDB_C

@@ -14,7 +14,7 @@ namespace pvdb {
 struct Allocator {
     Allocator() = default;
 
-    void init(gpu_context ctx, gpu_cmd cmd, span<const pvdb_allocator_level> levels, u32 offset = 0);
+    void init(gpu_context ctx, gpu_cmd cmd, span<const pvdb_allocator_level> levels, u32 offset = 0, Device d = DEVICE_CPU);
     void destroy(gpu_context ctx);
 
     void bind(gpu_context ctx, u32 binding, u32 array_index) const;

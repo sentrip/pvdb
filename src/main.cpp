@@ -69,14 +69,10 @@ int main() {
     device.events.on_key = [&](int k, bool pressed, bool repeated) { if (!repeated) ct.on_key(device, k, pressed); };
 
     auto cmd = rt.context().begin_setup();
-#ifdef PVDB_USE_IMAGES
-    auto t = rt.trees().create(cmd, {100'000'000, 3, {3, 4, 5}, 18u});
-#else
-    auto t = rt.trees().create(cmd, {100'000'000, 3, {3, 4, 5}});
-#endif
+    auto t = rt.trees().create(cmd, {100'000'000, 5, {3, 4, 5, 6, 7}}, pvdb::DEVICE_GPU);
     rt.context().end_setup();
     rt.context().wait_setup();
-    rt.debug_fill(t, {0, 0, 0}, {512, 1, 512}, {});
+    rt.debug_fill(t, {0, 0, 0}, {1024, 1, 1024}, {});
 
     device.swapchain.render.waits_for(rt.last_submit(), pvdb::gpu::PipelineStage::COLOR_OUTPUT);
 

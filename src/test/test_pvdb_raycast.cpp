@@ -14,23 +14,17 @@ TEST_CASE("pvdb_raycast", "[pvdb]")
 {
     pvdb_debug_nodes();
 
-    pvdb_buf_t<256> alloc{};
-    auto& nodes = (pvdb_buf_t<1000000>&)(*new atom_t[1000000]{});
-    auto& atlas = (pvdb_buf_t<25600000>&)(*new atom_t[25600000]{});
+    pvdb_buf_t<4096> alloc{};
+    auto& nodes = (pvdb_buf_t<25600000>&)(*new atom_t[25600000]{});
 
     pvdb_tree tree{};
     tree.data.nodes = nodes;
     tree.data.alloc = alloc;
-    tree.data.atlas = atlas;
     uint l2[PVDB_MAX_LEVELS]{1,2,3};
     uint ch[PVDB_MAX_LEVELS]{1,1,1,1,1,1,1,1};
-    #ifdef PVDB_USE_IMAGES
-    pvdb_tree_init(tree, 3, l2, 8u);
-    #else
     pvdb_tree_init(tree, 3, l2, ch);
-    #endif
 
-    pvdb_tree_init_allocator(tree, alloc, 256, 8u);
+    pvdb_tree_init_allocator(tree, alloc, 25600000);
 
     for (int x = 0; x <= 15; ++x)
         for (int z = 0; z <= 15; ++z)

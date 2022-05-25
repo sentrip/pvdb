@@ -5,26 +5,22 @@
 #include "catch.hpp"
 
 #define PVDB_C
+#define PVDB_ENABLE_PRINTF
 #include "../pvdb/pvdb_tree_write.h"
 
 
-template<uint NWords, uint NWordsAtlas, uint NLevels>
-pvdb_tree make_test_tree_write(pvdb_buf_t<NWords>& buf, pvdb_buf_t<256>& buf_alloc, pvdb_buf_t<NWordsAtlas>& buf_atlas, PVDB_ARRAY_IN(uint, log2dim, NLevels), uint leaf_count_log2dim)
+template<uint NWords, uint NLevels>
+pvdb_tree make_test_tree_write(pvdb_buf_t<NWords>& buf, pvdb_buf_t<256>& buf_alloc, PVDB_ARRAY_IN(uint, log2dim, NLevels))
 {
     pvdb_tree tree{};
     tree.data.nodes = buf;
     tree.data.alloc = buf_alloc;
-    tree.data.atlas = buf_atlas;
     uint l2[PVDB_MAX_LEVELS]{};
     uint ch[PVDB_MAX_LEVELS]{1,1,1,1,1,1,1,1};
     for (uint i = 0; i < NLevels; ++i) l2[i] = log2dim[i];
-    #ifdef PVDB_USE_IMAGES
-    pvdb_tree_init(tree, NLevels, l2, leaf_count_log2dim);
-    #else
     pvdb_tree_init(tree, NLevels, l2, ch);
-    #endif
 
-    pvdb_tree_init_allocator(tree, buf_alloc, NWords, leaf_count_log2dim);
+    pvdb_tree_init_allocator(tree, buf_alloc, NWords);
 
     return tree;
 }
@@ -34,8 +30,8 @@ template<uint NLevels>
 void test_pvdb_insert_node(PVDB_ARRAY_IN(uint, log2dim, NLevels), const ivec3& p)
 {
     pvdb_buf_t<256u> alloc{};
-    pvdb_buf_t<64000> data{}, atlas{};
-    pvdb_tree tree = make_test_tree_write(data, alloc, atlas, log2dim, 3u);
+    pvdb_buf_t<128000> data{};
+    pvdb_tree tree = make_test_tree_write(data, alloc, log2dim);
 
     // Beginning of tree reserved for root node
     uint offset = pvdb_node_size(tree, pvdb_root(tree));
@@ -45,13 +41,8 @@ void test_pvdb_insert_node(PVDB_ARRAY_IN(uint, log2dim, NLevels), const ivec3& p
     nodes[pvdb_root(tree)] = PVDB_ROOT_NODE;
     uint level = pvdb_root(tree) - 1;
     for (;;) {
-        #ifdef PVDB_USE_IMAGES
-        nodes[level] = level == 0u ? 1u : offset;
-        #else
         nodes[level] = offset;
-        #endif
-        if (level > 0u)
-            offset += pvdb_node_size(tree, level);
+        offset += pvdb_node_size(tree, level);
         if (level-- == 0) break;
     }
 
@@ -83,8 +74,8 @@ template<uint NLevels>
 void test_pvdb_insert(PVDB_ARRAY_IN(uint, log2dim, NLevels))
 {
     pvdb_buf_t<256u> alloc{};
-    pvdb_buf_t<64000> data{}, atlas{};
-    pvdb_tree tree = make_test_tree_write(data, alloc, atlas, log2dim, 16u);
+    pvdb_buf_t<128000> data{};
+    pvdb_tree tree = make_test_tree_write(data, alloc, log2dim);
 
     ivec4 results[NLevels]{};
 
@@ -131,14 +122,8 @@ template<uint NLevels>
 void test_pvdb_set(PVDB_ARRAY_IN(uint, log2dim, NLevels), uint delta, uint steps)
 {
     pvdb_buf_t<256u> alloc{};
-#ifdef PVDB_USE_IMAGES
-    auto& data = (pvdb_buf_t<10000000>&)(*new atom_t[10000000]{});
-    auto& atlas = (pvdb_buf_t<20000000>&)(*new atom_t[20000000]{});
-#else
-    auto& data = (pvdb_buf_t<10000000>&)(*new atom_t[10000000]{});
-    auto& atlas = (pvdb_buf_t<200>&)(*new atom_t[200]{});
-#endif
-    pvdb_tree tree = make_test_tree_write(data, alloc, atlas, log2dim, 16u);
+    auto& nodes = (pvdb_buf_t<1000000>&)(*new atom_t[1000000]{});
+    pvdb_tree tree = make_test_tree_write(nodes, alloc, log2dim);
 
     static constexpr auto get_val = [](int x, int y, int z) {
         return uint(x * 1000000 + y * 1000 + z);
@@ -168,8 +153,7 @@ void test_pvdb_set(PVDB_ARRAY_IN(uint, log2dim, NLevels), uint delta, uint steps
     if (mx != int(steps*delta - 1))
         REQUIRE( 99999999 == pvdb_get(tree, {mx, mx, mx}) );
 
-    delete [] ((atom_t*)&data);
-    delete [] ((atom_t*)&atlas);
+    delete [] ((atom_t*)&nodes);
 }
 
 
