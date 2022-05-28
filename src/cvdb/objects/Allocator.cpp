@@ -3,7 +3,7 @@
 //
 
 #include "Allocator.h"
-#include "../gpu/Context.h"
+#include "../../gpu/Context.h"
 
 namespace pvdb {
 
@@ -15,8 +15,8 @@ void Allocator::init(gpu_context ctx, gpu_cmd cmd, span<const pvdb_allocator_lev
     for (u32 i = 0; i < levels.size(); ++i) max_allocations[i] = levels[i].max_allocations;
 
     pvdb_buf_t<PVDB_ALLOCATOR_MAX_LEVELS*sizeof(pvdb_allocator)> alloc{};
-    const u32 alloc_size = pvdb_allocator_init(alloc, levels.size(), levels_array, offset);
-    const u32 alloc_buffer_size = pvdb_allocator_size(levels.size(), max_allocations);
+    u32 alloc_buffer_size = 0;
+    const u32 alloc_size = pvdb_allocator_init(alloc, levels.size(), levels_array, offset, alloc_buffer_size);
 
     auto& buffer = *new (storage) gpu::Buffer;
     buffer = ctx.create_buffer(alloc_buffer_size * sizeof(u32), gpu::BufferType::STORAGE, d == DEVICE_GPU ? gpu::BufferUsage::GPU : gpu::BufferUsage::CPU);

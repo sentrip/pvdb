@@ -3,8 +3,7 @@
 //
 
 /** MACRO INPUTS
-    * PVDB_CHANNELS_LEAF        - Number of channels in leaf nodes (default: 1)
-    * PVDB_CHANNELS_NODE        - Number of channels in internal nodes (default: 1)
+    * PVDB_GLOBAL_TREE          - name of global array (only required in glsl)
 */
 
 #ifndef PVDB_TREE_H
@@ -17,7 +16,7 @@
 /// globals
 #define PVDB_MAX_TREES                  8
 #define PVDB_MAX_LEVELS                 8
-#define PVDB_TREE_STRUCT_SIZE           6 // levels, log2dim_array, total_log2dim[2], data, atlas
+#define PVDB_TREE_STRUCT_SIZE           5 // levels, log2dim_array, total_log2dim[2], data
 #define PVDB_HEADER_SIZE                4 // parent, index_in_parent, mesh, UNUSED
 #define PVDB_ROOT_NODE                  0u
 #define PVDB_TILE                       0x80000000u
@@ -70,7 +69,6 @@ struct pvdb_tree {
     uint            levels_channels_array;
     uint            log2dim_array;
     uint            total_log2dim_array[2];
-    uint            PAD;
     pvdb_tree_data  data;
 };
 

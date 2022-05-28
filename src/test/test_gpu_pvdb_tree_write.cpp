@@ -5,18 +5,18 @@
 #include "test_gpu_utils.h"
 #include "catch.hpp"
 
-#include "../cvdb/Tree.h"
+#include "../cvdb/objects/Tree.h"
+#include "../pvdb/pvdb_global_test.h"
 
 using namespace pvdb::gpu;
 
 static constexpr std::string_view SRC_SET = R"(#version 450
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 //#extension GL_EXT_debug_printf : enable
 //#define PVDB_ENABLE_PRINTF
 
 layout(std430, binding = 3, set = 0) buffer ResultBuffer { uint data[]; } result;
 
-#include "pvdb/pvdb.glsl"
+#include "pvdb/pvdb_tree.glsl"
 
 layout(push_constant) uniform constants {
 	uint count;
@@ -25,6 +25,7 @@ layout(push_constant) uniform constants {
     pvdb_tree tree;
 } PC;
 
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 void main() {
     if (gl_GlobalInvocationID.x >= PC.count || gl_GlobalInvocationID.y >= PC.count || gl_GlobalInvocationID.z >= PC.count)
         return;
@@ -59,7 +60,7 @@ struct TestSetData {
         ctx.setup();
 
         auto setup = ctx.begin_setup();
-        ti = trees.create(setup, {100'000'000, 3, {3, 4, 5}});
+        ti = trees.create(setup, {100'000'000, 3, {3, 4, 5}}, pvdb::DEVICE_GPU);
         ctx.end_setup();
         ctx.wait_setup();
 
@@ -172,4 +173,6 @@ TEST_CASE("gpu_pvdb_set_bench", "[pvdb]")
            cube_size_per_second, square_size_per_second);
 
     test.destroy(ctx);
+
+    destroy_context(ctx);
 }

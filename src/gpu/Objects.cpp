@@ -41,6 +41,8 @@ Buffer Buffer::create(VmaAllocator vma, u64 size, BufferType type, BufferUsage u
     if (type == BufferType::INDIRECT)       t = tinyvk::BUFFER_INDIRECT;
     if (type == BufferType::UNIFORM)        t = tinyvk::BUFFER_UNIFORM;
     if (type == BufferType::STORAGE)        t = tinyvk::buffer_usage_t(tinyvk::BUFFER_STORAGE | tinyvk::BUFFER_TRANSFER_SRC | tinyvk::BUFFER_TRANSFER_DST);
+    if (type == BufferType::INDIRECT_STORAGE)
+        t = tinyvk::buffer_usage_t(tinyvk::BUFFER_INDIRECT | tinyvk::BUFFER_STORAGE | tinyvk::BUFFER_TRANSFER_SRC | tinyvk::BUFFER_TRANSFER_DST);
 
     tinyvk::vma_usage_t u{};
     if (usage == BufferUsage::CPU)          u = tinyvk::VMA_USAGE_CPU_ONLY;
@@ -250,16 +252,28 @@ void Cmd::dispatch(u32 x, u32 y, u32 z) const
     vkCmdDispatch(vk, x, y, z);
 }
 
+void Cmd::dispatch_indirect(VkBuffer count, u64 offset) const
+{
+    vkCmdDispatchIndirect(vk, count, offset);
+}
+
+void Cmd::copy_buffer(VkBuffer dst, u64 dst_offset, VkBuffer src, u64 src_offset, u64 size) const
+{
+    if (size == 0) return;
+    VkBufferCopy copy{src_offset, dst_offset, size};
+    vkCmdCopyBuffer(vk, src, dst, 1u, &copy);
+}
+
 void Cmd::fill_buffer(VkBuffer dst, u64 offset, u64 size, u32 value) const
 {
     if (size == 0) return;
     vkCmdFillBuffer(vk, dst, offset, size, value);
 }
 
-void Cmd::update_buffer(VkBuffer dst, u64 offset, span<const u8> data) const
+void Cmd::update_buffer(VkBuffer dst, u64 offset, const void* data, usize size) const
 {
-    if (data.empty()) return;
-    vkCmdUpdateBuffer(vk, dst, offset, data.size(), data.data());
+    if (size == 0) return;
+    vkCmdUpdateBuffer(vk, dst, offset, size, data);
 }
 
 void Cmd::begin_render_pass(const RenderPass& r, u32 frame, span<const ClearValue> clear) const
@@ -642,7 +656,9 @@ VertexAttribs VertexAttribs::reflect(span<const u32> binary)
 Pipeline Pipeline::create_compute(VkDevice device, VkPipelineLayout layout, span<const u32> bin)
 {
     auto shader = tinyvk::shader_module::create(device, bin);
-    auto pipeline = tinyvk::pipeline::create(device, tinyvk::pipeline::compute_desc{layout, shader});
+    tinyvk::pipeline::storage_t<256> st{};
+    u32 data[4]{3,2,1,0};
+    auto pipeline = tinyvk::pipeline::create(device, tinyvk::pipeline::compute_desc{st, layout, shader, {st, { {0u, &data, 16u} }}});
     shader.destroy(device);
     return {pipeline};
 }
@@ -653,6 +669,7 @@ Pipeline Pipeline::create_compute(VkDevice device, VkPipelineLayout layout, Shad
     tinyvk::preprocess_shader_cpp(src.src, preprocessed, {(const tinyvk::shader_macro*)src.macros.data(), src.macros.size()});
     auto bin = tinyvk::compile_shader_glslangvalidator(tinyvk::SHADER_COMPUTE, preprocessed, {}, tinyvk::SHADER_OPTIMIZATION_NONE);
     if (bin.empty()) { debug_print_preprocessed(preprocessed); return {}; }
+    tinyvk::reflect_shader_convert_const_array_to_spec_const(bin);
     return create_compute(device, layout, bin);
 }
 
@@ -713,8 +730,12 @@ Pipeline Pipeline::create_graphics(VkDevice device, VkPipelineLayout layout, Sha
     tinyvk::preprocess_shader_cpp(src_frag.src, preprocessed_frag, {(const tinyvk::shader_macro*)src_frag.macros.data(), src_frag.macros.size()});
     auto bin_vert = tinyvk::compile_shader_glslangvalidator(tinyvk::SHADER_VERTEX, preprocessed_vert, {}, tinyvk::SHADER_OPTIMIZATION_NONE);
     if (bin_vert.empty()) { debug_print_preprocessed(preprocessed_vert); return {}; }
+    tinyvk::reflect_shader_convert_const_array_to_spec_const(bin_vert);
+
     auto bin_frag = tinyvk::compile_shader_glslangvalidator(tinyvk::SHADER_FRAGMENT, preprocessed_frag, {}, tinyvk::SHADER_OPTIMIZATION_NONE);
     if (bin_frag.empty()) { debug_print_preprocessed(preprocessed_frag); return {}; }
+    tinyvk::reflect_shader_convert_const_array_to_spec_const(bin_frag);
+
     return create_graphics(device, layout, bin_vert, bin_frag, desc);
 }
 

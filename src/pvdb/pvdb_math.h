@@ -180,15 +180,54 @@ pvdb_mat4_to_frustum(
 
 //endregion
 
+//region 3d-region
+
+PVDB_INLINE bool
+pvdb_intersects(
+    PVDB_IN(ivec3)      bbox_min,
+    PVDB_IN(ivec3)      bbox_max,
+    PVDB_IN(ivec3)      xyz)
+{
+    return !(xyz.x < bbox_min.x || xyz.y < bbox_min.y || xyz.z < bbox_min.z
+            || xyz.x > bbox_max.x || xyz.y > bbox_max.y || xyz.z > bbox_max.z);
+}
+
+
+PVDB_INLINE bool
+pvdb_region_test(
+    ivec3               i,
+    ivec3               size,
+    ivec3               cur,
+    ivec3               prev,
+    int                 total_log2dim,
+    PVDB_INOUT(ivec3)   xyz)
+{
+    ivec3 h = size / 2;
+    ivec3 mask = ivec3(-1) << total_log2dim;
+    ivec3 cur_m = (cur & mask) - (h << total_log2dim);
+    xyz = cur_m + (i << total_log2dim);
+
+    if (prev.x != PVDB_INT_MAX) {
+        ivec3 prev_m = (prev & mask) - (h << total_log2dim);
+        ivec3 end_prev = prev_m + (size << total_log2dim) - ivec3(1);
+        if (pvdb_intersects(prev_m, end_prev, xyz)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+//endregion
+
 //region compute_region
 
 PVDB_INLINE uint
 pvdb_compute_region_size(
     PVDB_IN(ivec3)     size,
-    PVDB_IN(ivec3)     local_size,
-    PVDB_IN(ivec3)     global_size)
+    PVDB_IN(ivec3)     local_size)
 {
-    const ivec3 size_global = size / local_size;
+    const ivec3 size_global = ivec3(1) + (size - ivec3(1)) / local_size;
     return uint(size_global.x * size_global.y * size_global.z);
 }
 
@@ -197,15 +236,28 @@ PVDB_INLINE ivec3
 pvdb_compute_region(
     uint               index,
     PVDB_IN(ivec3)     size,
-    PVDB_IN(ivec3)     local_size,
-    PVDB_IN(ivec3)     global_size)
+    PVDB_IN(ivec3)     local_size)
 {
-    const ivec3 size_global = size / local_size;
+    const ivec3 size_global = ivec3(1) + (size - ivec3(1)) / local_size;
     return ivec3(
         int(index) / (size_global.y * size_global.z),
         (int(index) / size_global.z) % size_global.y,
         int(index) % size_global.z
     ) * local_size;
+}
+
+/** Usage:
+    #define X(p) printf("%d, %d, %d\n", p.x, p.y, p.z)
+    pvdb_compute_region_foreach(X, ivec3(16), ivec3(4))
+    #undef X
+*/
+#define pvdb_compute_region_foreach(f, size, local_size) {                 \
+    const ivec3 sz = (size), lsz = (local_size);                           \
+    const uint compute_region_size = pvdb_compute_region_size(sz, lsz);    \
+    for (uint i = 0; i < compute_region_size; ++i) {                       \
+        const ivec3 p = pvdb_compute_region(i, sz, lsz);                   \
+        f(p);                                                              \
+    }                                                                      \
 }
 
 //endregion

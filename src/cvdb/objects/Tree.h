@@ -6,7 +6,7 @@
 #define PVDB_CVDB_TREE_H
 
 #include "Allocator.h"
-#include "../pvdb/pvdb_tree.h"
+#include "../../pvdb/pvdb_tree.h"
 
 namespace pvdb {
 

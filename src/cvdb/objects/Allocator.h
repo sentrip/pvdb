@@ -5,8 +5,8 @@
 #ifndef PVDB_CVDB_ALLOCATOR_H
 #define PVDB_CVDB_ALLOCATOR_H
 
-#include "fwd.h"
-#include "../pvdb/pvdb_allocator.h"
+#include "../fwd.h"
+#include "../../pvdb/pvdb_allocator.h"
 
 namespace pvdb {
 

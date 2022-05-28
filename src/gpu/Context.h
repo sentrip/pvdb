@@ -113,6 +113,7 @@ static const char* to_string(Int i)
         if (began) { storage[size++] = c; }
         multiple /= 10u;
     }
+    if (!began) storage[size++] = '0';
     storage[size++] = 0;
     return begin;
 }

@@ -7,7 +7,7 @@
 #define PVDB_C
 #define PVDB_ENABLE_PRINTF
 #include "../pvdb/pvdb_tree_write.h"
-#include "../pvdb/pvdb_raycast.h"
+#include "../pvdb/pvdb_tree_raycast.h"
 
 #define PRECISE
 //#define CASE1

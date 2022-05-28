@@ -42,9 +42,9 @@ layout(location = 0) in vec2 inputUV;
 layout(location = 0) out vec4 outputColor;
 
 #define PVDB_TREE_READONLY
-#include "pvdb/pvdb.glsl"
+#include "pvdb/pvdb_tree.glsl"
 #include "pvdb/pvdb_camera.glsl"
-#include "pvdb/pvdb_raycast.h"
+#include "pvdb/pvdb_tree_raycast.h"
 
 layout(push_constant) uniform constants { pvdb_tree tree; } PC;
 

@@ -30,19 +30,21 @@ pvdb_tree_init_allocator_levels(
 }
 
 
-PVDB_INLINE void
+PVDB_INLINE uint
 pvdb_tree_init_allocator(
     pvdb_tree_in        tree,
     pvdb_buf_inout      alloc,
     uint                size)
 {
+    uint alloc_size = 0;
     pvdb_allocator_level levels[PVDB_ALLOCATOR_MAX_LEVELS];
     pvdb_tree_init_allocator_levels(tree, size, levels);
 #ifdef PVDB_ALLOCATOR_MASK
-    pvdb_allocator_init(alloc, pvdb_levels(tree) - 1u, levels, pvdb_node_size(tree, pvdb_root(tree)));
+    pvdb_allocator_init(alloc, pvdb_levels(tree) - 1u, levels, pvdb_node_size(tree, pvdb_root(tree)), alloc_size);
 #else
-    pvdb_allocator_init(alloc, pvdb_levels(tree) - 1u, levels, 0u);
+    pvdb_allocator_init(alloc, pvdb_levels(tree) - 1u, levels, 0u, alloc_size);
 #endif
+    return alloc_size;
 }
 
 //endregion

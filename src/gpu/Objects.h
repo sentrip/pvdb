@@ -15,6 +15,7 @@ enum class BufferType {
     VERTEX,
     INDIRECT,
     UNIFORM,
+    INDIRECT_STORAGE
 };
 
 enum class BufferUsage {
@@ -227,8 +228,12 @@ struct Cmd {
     void                draw(u32 vertex_count) const;
     void                draw_indirect_indexed(const BufferView& dst, const BufferView& count, u32 max_draws) const;
     void                dispatch(u32 x = 1, u32 y = 1, u32 z = 1) const;
+    void                dispatch_indirect(VkBuffer count, u64 offset = 0) const;
+    void                copy_buffer(VkBuffer dst, u64 dst_offset, VkBuffer src, u64 src_offset, u64 size) const;
     void                fill_buffer(VkBuffer dst, u64 offset, u64 size, u32 value) const;
-    void                update_buffer(VkBuffer dst, u64 offset, span<const u8> data) const;
+    void                update_buffer(VkBuffer dst, u64 offset, const void* data, usize size) const;
+    template<typename T = u8>
+    void                update_buffer(VkBuffer dst, u64 offset, span<const T> data) const { update_buffer(dst, offset, (const void*)data.data(), data.size() * sizeof(T)); }
 
     void                barrier(PipelineStage src, PipelineStage dst, Dependency dep = {},
                                 span<const MemoryBarrier> memory = {},

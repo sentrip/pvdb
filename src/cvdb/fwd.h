@@ -55,7 +55,7 @@ struct Submit;
 namespace pvdb {
 
 using gpu_context = const gpu::Context&;
-using gpu_cmd = gpu::Cmd;
+using gpu_cmd = const gpu::Cmd&;
 
 
 static constexpr u32 GPU_IMAGE_SIZE_BYTES = 32;

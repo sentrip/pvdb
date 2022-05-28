@@ -49,11 +49,16 @@ int main() {
 }
 */
 
-#include "cvdb/Tree.h"
+#include "cvdb/objects/Tree.h"
+#include "cvdb/objects/Camera.h"
 #include "cvdb/Runtime.h"
-#include "cvdb/Camera.h"
 #include "cvdb/Debug.h"
-#include "pvdb/pvdb_raycast.h"
+#include "pvdb/pvdb_tree_raycast.h"
+
+
+
+
+
 
 #include <chrono>
 

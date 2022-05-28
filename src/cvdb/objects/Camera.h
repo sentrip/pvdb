@@ -5,10 +5,10 @@
 #ifndef PVDB_CVDB_CAMERA_H
 #define PVDB_CVDB_CAMERA_H
 
-#include "fwd.h"
-#include "../pvdb/pvdb_math.h"
+#include "../fwd.h"
+#include "../../pvdb/pvdb_math.h"
 
-#include "../gpu/Objects.h"
+#include "../../gpu/Objects.h"
 
 namespace pvdb {
 

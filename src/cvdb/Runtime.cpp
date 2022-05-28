@@ -3,8 +3,8 @@
 //
 
 #include "Runtime.h"
-#include "Tree.h"
-#include "Camera.h"
+#include "objects/Tree.h"
+#include "objects/Camera.h"
 
 #include "../gpu/Context.h"
 #include "passes/DebugFill.h"

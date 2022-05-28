@@ -3,7 +3,7 @@
 //
 
 #include "Camera.h"
-#include "../gpu/Context.h"
+#include "../../gpu/Context.h"
 #include <cstring>
 
 namespace pvdb {

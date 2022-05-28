@@ -3,8 +3,8 @@
 //
 
 #include "Tree.h"
-#include "../gpu/Context.h"
-#include "../pvdb/pvdb_tree_write.h"
+#include "../../gpu/Context.h"
+#include "../../pvdb/pvdb_tree_write.h"
 
 namespace pvdb {
 
@@ -14,7 +14,6 @@ struct tree_gpu {
     uint            levels_channels_array;
     uint            log2dim_array;
     uint            total_log2dim_array[2];
-    uint            PAD;
     uint            data;
 };
 static_assert(sizeof(tree_gpu) == (PVDB_TREE_STRUCT_SIZE * sizeof(u32)), "tree_gpu does not match gpu version of pvdb_tree");
@@ -49,7 +48,6 @@ void Tree::push_const(gpu_context ctx, gpu_cmd cmd, u32 offset) const
     t.log2dim_array = info.log2dim_array;
     t.total_log2dim_array[0] = info.total_log2dim_array[0];
     t.total_log2dim_array[1] = info.total_log2dim_array[1];
-    t.PAD = info.PAD;
     t.data = index;
     ctx.push_const<tree_gpu>(cmd, t, offset);
 }

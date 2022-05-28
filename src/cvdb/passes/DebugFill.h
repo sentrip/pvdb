@@ -54,9 +54,7 @@ struct DebugFill : Subpass {
 
     static constexpr ivec3 LOCAL_SIZE = ivec3(8);
     static constexpr const char* SRC = R"(#version 450
-layout(local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = LOCAL_SIZE) in;
-
-#include "pvdb/pvdb.glsl"
+#include "pvdb/pvdb_tree.glsl"
 
 layout(push_constant) uniform constants {
 	ivec3 offset;
@@ -66,6 +64,7 @@ layout(push_constant) uniform constants {
     pvdb_tree tree;
 } PC;
 
+layout(local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = LOCAL_SIZE) in;
 void main() {
     if (gl_GlobalInvocationID.x >= PC.size.x || gl_GlobalInvocationID.y >= PC.size.y || gl_GlobalInvocationID.z >= PC.size.z)
         return;
