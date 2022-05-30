@@ -6,7 +6,7 @@
 #define PVDB_CVDB_TREE_H
 
 #include "Allocator.h"
-#include "../../pvdb/pvdb_tree.h"
+#include "../../pvdb/tree/pvdb_tree.h"
 
 namespace pvdb {
 
@@ -45,6 +45,7 @@ struct Trees {
     u32  create(gpu_cmd cmd, const TreeDesc& desc, Device d = DEVICE_CPU);
     void destroy(u32 tree);
 
+    void push_const(gpu_cmd cmd, u32 tree, u32 offset = 0) const { tree_array[tree].push_const(*p_ctx, cmd, offset); }
     const Tree& operator[](u32 t) const { return tree_array[t]; }
 
 private:

@@ -99,7 +99,7 @@ inline uint    floatBitsToUint(float f) { return uint((uint&)f); }
 inline float   uintBitsToFloat(uint u)  { return float((float&)u); }
 constexpr uint findLSB(uint v) { for(uint i = 0; i < 32; ++i) if ((v & (1u << i)) != 0u) return i; return -1u; }
 
-#include "pvdb_compat_math.h"
+#include "compat/pvdb_compat_math.h"
 
 #endif
 

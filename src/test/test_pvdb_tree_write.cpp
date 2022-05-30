@@ -6,7 +6,7 @@
 
 #define PVDB_C
 #define PVDB_ENABLE_PRINTF
-#include "../pvdb/pvdb_tree_write.h"
+#include "../pvdb/tree/pvdb_tree_write.h"
 
 
 template<uint NWords, uint NLevels>
@@ -51,18 +51,18 @@ void test_pvdb_insert_node(PVDB_ARRAY_IN(uint, log2dim, NLevels), const ivec3& p
     for (;;) {
         // Traverse fails at previous level
         uint target_level = 0;
-        uint result = pvdb_traverse(tree, 0, pvdb_root(tree), target_level, p);
+        uint result = pvdb_tree_traverse(tree, 0, pvdb_root(tree), target_level, p);
         REQUIRE( target_level == level );
         REQUIRE( result == (level == pvdb_root(tree) ? 0u : nodes[level]) );
 
         // Insert node
         auto l = pvdb_coord_global_to_index(tree, p, level);
-        uint n = pvdb_try_insert_node(tree, level - 1, nodes[level], l, 0);
+        uint n = pvdb_tree_try_insert_node(tree, level - 1, nodes[level], l, 0);
         REQUIRE( n == nodes[level - 1] );
 
         // Traverse succeeds at current level
         target_level = 0;
-        result = pvdb_traverse(tree, 0, pvdb_root(tree), target_level, p);
+        result = pvdb_tree_traverse(tree, 0, pvdb_root(tree), target_level, p);
         REQUIRE( target_level == (level - 1) );
         REQUIRE( result == nodes[level - 1] );
 
@@ -81,38 +81,38 @@ void test_pvdb_insert(PVDB_ARRAY_IN(uint, log2dim, NLevels))
 
     // zero
     auto p = ivec3(0);
-    uint n = pvdb_insert(tree, 0, p, 0);
-    uint rs = pvdb_traverse_at_least(tree, 0, p);
+    uint n = pvdb_tree_insert(tree, 0, p, 0);
+    uint rs = pvdb_tree_traverse_at_least(tree, 0, p);
     REQUIRE( n == rs );
     results[0] = ivec4(p, int(rs));
 
     // local + 1
     for (uint level = 0; level < NLevels - 1; ++level) {
         p = ivec3(0, 0, pvdb_total_dim(tree, level));
-        uint node = pvdb_insert(tree, 0, p, 0);
-        uint result = pvdb_traverse_at_least(tree, 0, p);
+        uint node = pvdb_tree_insert(tree, 0, p, 0);
+        uint result = pvdb_tree_traverse_at_least(tree, 0, p);
         REQUIRE( node == result );
         results[level + 1] = ivec4(p, int(result));
     }
 
     // ensure inserts do not affect other inserts
     auto r = results[0];
-    uint node = pvdb_traverse_at_least(tree, 0, {r.x, r.y, r.z});
+    uint node = pvdb_tree_traverse_at_least(tree, 0, {r.x, r.y, r.z});
     REQUIRE( node == uint(r.w) );
     for (uint level = 0; level < NLevels - 1; ++level) {
         r = results[level + 1];
-        node = pvdb_traverse_at_least(tree, 0, {r.x, r.y, r.z});
+        node = pvdb_tree_traverse_at_least(tree, 0, {r.x, r.y, r.z});
         REQUIRE( node == uint(r.w) );
     }
 
     // ensure repeated inserts do nothing
     uint allocated = tree.data.alloc[0];
     r = results[0];
-    node = pvdb_insert(tree, 0, {r.x, r.y, r.z}, 0);
+    node = pvdb_tree_insert(tree, 0, {r.x, r.y, r.z}, 0);
     REQUIRE( node == uint(r.w) );
     for (uint level = 0; level < NLevels - 1; ++level) {
         r = results[level + 1];
-        node = pvdb_insert(tree, 0, {r.x, r.y, r.z}, 0);
+        node = pvdb_tree_insert(tree, 0, {r.x, r.y, r.z}, 0);
         REQUIRE( node == uint(r.w) );
     }
     REQUIRE(tree.data.alloc[0] == allocated);
@@ -133,25 +133,25 @@ void test_pvdb_set(PVDB_ARRAY_IN(uint, log2dim, NLevels), uint delta, uint steps
     for (int x = 0; x < end; x += int(delta)) {
         for (int y = 0; y < end; y += int(delta)) {
             for (int z = 0; z < end; z += int(delta)) {
-                pvdb_set(tree, {x, y, z}, get_val(x, y, z));
-                REQUIRE( get_val(x, y, z) == pvdb_get(tree, {x, y, z}) );
+                pvdb_tree_set(tree, {x, y, z}, get_val(x, y, z));
+                REQUIRE( get_val(x, y, z) == pvdb_tree_get(tree, {x, y, z}) );
             }
         }
     }
     const int mx = int(pvdb_total_dim(tree, pvdb_root(tree)) - 1);
     if (mx != int(steps*delta - 1))
-        pvdb_set(tree, {mx, mx, mx}, 99999999);
+        pvdb_tree_set(tree, {mx, mx, mx}, 99999999);
 
     for (int x = 0; x < end; x += int(delta)) {
         for (int y = 0; y < end; y += int(delta)) {
             for (int z = 0; z < end; z += int(delta)) {
-                REQUIRE( get_val(x, y, z) == pvdb_get(tree, {x, y, z}) );
+                REQUIRE( get_val(x, y, z) == pvdb_tree_get(tree, {x, y, z}) );
             }
         }
     }
 
     if (mx != int(steps*delta - 1))
-        REQUIRE( 99999999 == pvdb_get(tree, {mx, mx, mx}) );
+        REQUIRE( 99999999 == pvdb_tree_get(tree, {mx, mx, mx}) );
 
     delete [] ((atom_t*)&nodes);
 }

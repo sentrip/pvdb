@@ -10,7 +10,7 @@
 #ifndef PVDB_ALLOCATOR_H
 #define PVDB_ALLOCATOR_H
 
-#include "pvdb_buffer.h"
+#include "../pvdb_buffer.h"
 
 //region definitions
 

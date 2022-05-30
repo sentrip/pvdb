@@ -5,7 +5,7 @@
 #ifndef PVDB_DEBUG_H
 #define PVDB_DEBUG_H
 
-#include "Camera.h"
+#include "objects/Camera.h"
 #include "../gpu/DebugDevice.h"
 #include <array>
 

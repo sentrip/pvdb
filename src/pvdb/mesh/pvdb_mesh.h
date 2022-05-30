@@ -5,8 +5,8 @@
 #ifndef PVDB_MESH_H
 #define PVDB_MESH_H
 
-#include "pvdb_buffer.h"
-#include "pvdb_allocator.h"
+#include "../pvdb_buffer.h"
+#include "../util/pvdb_allocator.h"
 
 
 #ifndef PVDB_GLOBAL_MESHES

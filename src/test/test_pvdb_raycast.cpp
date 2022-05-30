@@ -6,8 +6,8 @@
 
 #define PVDB_C
 #define PVDB_ENABLE_PRINTF
-#include "../pvdb/pvdb_tree_write.h"
-#include "../pvdb/pvdb_tree_raycast.h"
+#include "../pvdb/tree/pvdb_tree_write.h"
+#include "../pvdb/tree/pvdb_tree_raycast.h"
 
 #define PRECISE
 //#define CASE1
@@ -29,7 +29,7 @@ TEST_CASE("pvdb_raycast", "[pvdb]")
     pvdb_tree_init_allocator(tree, alloc, 25600000);
 
 #ifdef CASE1
-    pvdb_set(tree, {11, 1, 63}, 999u);
+    pvdb_tree_set(tree, {11, 1, 63}, 999u);
 
 #ifdef PRECISE
     pvdb_ray ray{{0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}};
@@ -40,7 +40,7 @@ TEST_CASE("pvdb_raycast", "[pvdb]")
 #endif
 
 #else
-    pvdb_set(tree, {1, 1, 11}, 999u);
+    pvdb_tree_set(tree, {1, 1, 11}, 999u);
 
 #ifdef PRECISE
     pvdb_ray ray{{0.5, 0.5, 0.5}, {0.0, 0.0, -1.0}};

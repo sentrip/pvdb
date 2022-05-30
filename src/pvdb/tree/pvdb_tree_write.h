@@ -6,9 +6,9 @@
 #define PVDB_TREE_WRITE_H
 
 #include "pvdb_tree_read.h"
-#include "pvdb_allocator.h"
+#include "../util/pvdb_allocator.h"
 
-//region definitions
+//region allocator
 
 PVDB_INLINE void
 pvdb_tree_init_allocator_levels(
@@ -53,7 +53,7 @@ pvdb_tree_init_allocator(
 
 /// write value to node
 PVDB_INLINE void
-pvdb_write_node(
+pvdb_tree_write_node(
     pvdb_tree_in        tree,
     uint                level,
     uint                node,
@@ -67,7 +67,7 @@ pvdb_write_node(
 
 /// write value to node at given channel
 PVDB_INLINE void
-pvdb_write_node(
+pvdb_tree_write_node(
     pvdb_tree_in        tree,
     uint                level,
     uint                node,
@@ -82,14 +82,14 @@ pvdb_write_node(
 
 /// write node mask atomically
 PVDB_INLINE bool
-pvdb_write_node_mask(
+pvdb_tree_write_node_mask(
     pvdb_tree_in        tree,
     uint                node,
     uint                index,
     bool                on)
 {
     const uint address = node + pvdb_mask_offset(index);
-    const uint mask = 1u << pvdb_mask_bit_i(index);
+    const uint mask = 1u << (index & 31u);
     const uint current = pvdb_tree_at(tree, address);
     const uint updated = on ? (current | mask) : (current & ~mask);
     const uint prev = atomicCompSwap(pvdb_tree_at(tree, address), current, updated);
@@ -99,7 +99,7 @@ pvdb_write_node_mask(
 
 /// write value to the first channel in the given leaf at the given position
 PVDB_INLINE void
-pvdb_write_leaf(
+pvdb_tree_write_leaf(
     pvdb_tree_in        tree,
     uint                leaf,
     PVDB_IN(ivec3)      p,
@@ -107,14 +107,14 @@ pvdb_write_leaf(
 {
     const uint i = pvdb_coord_local_to_index(tree, p, 0);
     pvdb_tree_at(tree, leaf + pvdb_data_offset(tree, 0, i)) = v;
-    atomicAnd(pvdb_tree_at(tree, leaf + pvdb_mask_offset(i)), ~(1u << pvdb_mask_bit_i(i)));
-    atomicOr(pvdb_tree_at(tree, leaf + pvdb_mask_offset(i)), uint(v != 0u) << pvdb_mask_bit_i(i));
+    atomicAnd(pvdb_tree_at(tree, leaf + pvdb_mask_offset(i)), ~(1u << (i & 31u)));
+    atomicOr(pvdb_tree_at(tree, leaf + pvdb_mask_offset(i)), uint(v != 0u) << (i & 31u));
 }
 
 
 /// write value to the given channel in the given leaf at the given position
 PVDB_INLINE void
-pvdb_write_leaf(
+pvdb_tree_write_leaf(
     pvdb_tree_in        tree,
     uint                leaf,
     PVDB_IN(ivec3)      p,
@@ -131,7 +131,7 @@ pvdb_write_leaf(
 
 /// insert node/tile
 PVDB_INLINE uint
-pvdb_try_insert_node(
+pvdb_tree_try_insert_node(
     pvdb_tree_in        tree,
     uint                child_level,
     uint                parent,
@@ -143,7 +143,7 @@ pvdb_try_insert_node(
     uint node = pvdb_tree_at(tree, address_data);
     while (node == 0u) {
         // If we are the first thread to set the bit, insert the new node
-        if (pvdb_write_node_mask(tree, parent, child_index_in_parent, true)) {
+        if (pvdb_tree_write_node_mask(tree, parent, child_index_in_parent, true)) {
 //            PVDB_PRINTF("\n\tWRITE MASK: node: %u, index: %u\n", parent, child_index_in_parent);
             if (child == 0u) {
                 child = pvdb_allocator_alloc(pvdb_tree_data_alloc(tree.data), child_level);
@@ -167,7 +167,7 @@ pvdb_try_insert_node(
 
 /// insert node/tile at any level
 PVDB_INLINE uint
-pvdb_insert(
+pvdb_tree_insert(
     pvdb_tree_in        tree,
     uint                child_level,
     PVDB_IN(ivec3)      p,
@@ -180,7 +180,7 @@ pvdb_insert(
         const ivec3 local = pvdb_coord_global_to_local(tree, p, level + 1);
         const uint index_in_parent = pvdb_coord_local_to_index(tree, local, level + 1);
 //        uint parent = node;
-        node = pvdb_try_insert_node(tree, level, node, index_in_parent, (level == child_level) ? child : 0u);
+        node = pvdb_tree_try_insert_node(tree, level, node, index_in_parent, (level == child_level) ? child : 0u);
 //        PVDB_PRINTF("INSERT global(%4d, %4d, %4d), local(%4d, %4d, %4d), level: %u, parent: %8u, node: %8u, index: %8u\n", p.x, p.y, p.z, local.x, local.y, local.z, level, parent, node, index_in_parent);
         if (pvdb_is_tile(node) || level-- == child_level) break;
     }
@@ -193,56 +193,56 @@ pvdb_insert(
 
 /// set value in the first channel at the given coord (inserts new nodes if required)
 PVDB_INLINE void
-pvdb_set(
+pvdb_tree_set(
     pvdb_tree_in        tree,
     PVDB_IN(ivec3)      p,
     uint                v)
 {
-    const uint leaf = pvdb_insert(tree, 0, p, 0);
+    const uint leaf = pvdb_tree_insert(tree, 0, p, 0);
     if (pvdb_is_tile(leaf)) return;
 //    PVDB_PRINTF("\n\t(%d, %d, %d): leaf: %u\n", p.x, p.y, p.z, leaf);
-    pvdb_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v);
+    pvdb_tree_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v);
 }
 
 
 /// set value in the given channel at the given coord (inserts new nodes if required)
 PVDB_INLINE void
-pvdb_set(
+pvdb_tree_set(
     pvdb_tree_in        tree,
     PVDB_IN(ivec3)      p,
     uint                v,
     uint                channel)
 {
-    const uint leaf = pvdb_insert(tree, 0, p, 0);
+    const uint leaf = pvdb_tree_insert(tree, 0, p, 0);
     if (pvdb_is_tile(leaf)) return;
-    pvdb_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v, channel);
+    pvdb_tree_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v, channel);
 }
 
 
 /// set value in the first channel at the given coord (does not attempt to insert new nodes)
 PVDB_INLINE void
-pvdb_replace(
+pvdb_tree_replace(
     pvdb_tree_in        tree,
     PVDB_IN(ivec3)      p,
     uint                v)
 {
-    const uint leaf = pvdb_traverse_at_least(tree, 0, p);
+    const uint leaf = pvdb_tree_traverse_at_least(tree, 0, p);
     if (leaf == 0u || pvdb_is_tile(leaf)) return;
-    pvdb_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v);
+    pvdb_tree_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v);
 }
 
 
 /// set value in the given channel at the given coord (does not attempt to insert new nodes)
 PVDB_INLINE void
-pvdb_replace(
+pvdb_tree_replace(
     pvdb_tree_in        tree,
     PVDB_IN(ivec3)      p,
     uint                v,
     uint                channel)
 {
-    const uint leaf = pvdb_traverse_at_least(tree, 0, p);
+    const uint leaf = pvdb_tree_traverse_at_least(tree, 0, p);
     if (leaf == 0u || pvdb_is_tile(leaf)) return;
-    pvdb_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v, channel);
+    pvdb_tree_write_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0), v, channel);
 }
 
 //endregion
@@ -251,7 +251,7 @@ pvdb_replace(
 
 /// copy mask and value from src node and index at src level to dst node and index at dst lvl
 PVDB_INLINE void
-pvdb_copy_value(
+pvdb_tree_copy_value(
     pvdb_tree_in        dst,
     uint                dst_level,
     uint                dst_node,
@@ -261,16 +261,16 @@ pvdb_copy_value(
     uint                src_node,
     uint                src_index)
 {
-    const bool is_on = pvdb_read_node_mask(src, src_node, src_index);
-    const uint value = pvdb_read_node(src, src_level, src_node, src_index);
-    pvdb_write_node_mask(dst, dst_node, dst_index, is_on);
-    pvdb_write_node(dst, dst_level, dst_node, dst_index, value);
+    const bool is_on = pvdb_tree_read_node_mask(src, src_node, src_index);
+    const uint value = pvdb_tree_read_node(src, src_level, src_node, src_index);
+    pvdb_tree_write_node_mask(dst, dst_node, dst_index, is_on);
+    pvdb_tree_write_node(dst, dst_level, dst_node, dst_index, value);
 }
 
 
 /// copy mask and value from src node and index at src level and channel to dst node and index at dst lvl and channel
 PVDB_INLINE void
-pvdb_copy_value(
+pvdb_tree_copy_value(
     pvdb_tree_in        dst,
     uint                dst_level,
     uint                dst_node,
@@ -282,10 +282,10 @@ pvdb_copy_value(
     uint                src_index,
     uint                src_channel)
 {
-    const bool is_on = pvdb_read_node_mask(src, src_node, src_index);
-    const uint value = pvdb_read_node(src, src_level, src_node, src_index, src_channel);
-    pvdb_write_node_mask(dst, dst_node, dst_index, is_on);
-    pvdb_write_node(dst, dst_level, dst_node, dst_index, value, dst_channel);
+    const bool is_on = pvdb_tree_read_node_mask(src, src_node, src_index);
+    const uint value = pvdb_tree_read_node(src, src_level, src_node, src_index, src_channel);
+    pvdb_tree_write_node_mask(dst, dst_node, dst_index, is_on);
+    pvdb_tree_write_node(dst, dst_level, dst_node, dst_index, value, dst_channel);
 }
 
 //endregion

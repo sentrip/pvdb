@@ -4,7 +4,7 @@
 
 #include "Tree.h"
 #include "../../gpu/Context.h"
-#include "../../pvdb/pvdb_tree_write.h"
+#include "../../pvdb/tree/pvdb_tree_write.h"
 
 namespace pvdb {
 

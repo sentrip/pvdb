@@ -54,7 +54,7 @@ struct DebugFill : Subpass {
 
     static constexpr ivec3 LOCAL_SIZE = ivec3(8);
     static constexpr const char* SRC = R"(#version 450
-#include "pvdb/pvdb_tree.glsl"
+#include "pvdb/tree/pvdb_tree.glsl"
 
 layout(push_constant) uniform constants {
 	ivec3 offset;
@@ -69,7 +69,7 @@ void main() {
     if (gl_GlobalInvocationID.x >= PC.size.x || gl_GlobalInvocationID.y >= PC.size.y || gl_GlobalInvocationID.z >= PC.size.z)
         return;
     ivec3 leaf_pos = ivec3(gl_GlobalInvocationID >> pvdb_log2dim(PC.tree, 0u));
-    pvdb_set(PC.tree, PC.offset + ivec3(gl_GlobalInvocationID), 1u + uint((leaf_pos.x & 1) + (leaf_pos.y & 1) + (leaf_pos.z & 1)));
+    pvdb_tree_set(PC.tree, PC.offset + ivec3(gl_GlobalInvocationID), 1u + uint((leaf_pos.x & 1) + (leaf_pos.y & 1) + (leaf_pos.z & 1)));
 })";
 };
 

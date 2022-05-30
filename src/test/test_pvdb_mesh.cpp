@@ -7,25 +7,7 @@
 #define PVDB_C
 #define PVDB_ENABLE_PRINTF
 
-#define PVDB_QUEUE_TYPE ivec3
-#define PVDB_QUEUE_NAME pvdb_queue_ivec3
-#define PVDB_QUEUE_IMPLEMENTATION
-#include "../pvdb/pvdb_queue.h"
-
-TEST_CASE("pvdb_queue", "[pvdb]") {
-    unsigned char buffer[sizeof(pvdb_queue_ivec3) + 1000 + sizeof(ivec3)];
-    auto& queue = *new (buffer) pvdb_queue_ivec3;
-    queue.count[0] = 0;
-    queue.count[1] = 512;
-    pvdb_queue_add(queue, ivec3(0, 0, 1));
-    ivec3 r;
-    if (pvdb_queue_get(queue, 0, r)) {
-        printf("%d, %d, %d\n", r.x, r.y, r.z);
-    }
-}
-
-/*
-#include "../pvdb/pvdb_mesh.h"
+#include "../pvdb/mesh/pvdb_mesh.h"
 
 
 
@@ -184,40 +166,26 @@ struct buddy_alloc2 {
 
 //region definitions
 
-#ifdef PVDB_C
-struct buddy_alloc3;
-typedef const buddy_alloc3& buddy_alloc3_in;
-typedef buddy_alloc3&       buddy_alloc3_inout;
-#else
-#define buddy_alloc3_in     in buddy_alloc3
-#define buddy_alloc3_inout  inout buddy_alloc3
-#endif
+#define PVDB_BA_MAX_LEVELS      32u
 
 #define pvdb_buddy_alloc_at(buf, addr)  pvdb_buf_at(buf, PVDB_GLOBAL_BUDDY_ALLOC, addr)
 
-
-struct buddy_alloc3 {
-    uint size;
-    uint levels;
-};
-
-
 PVDB_INLINE uint
 pvdb_buddy_alloc_init(
-    buddy_alloc3_in     alloc,
+    pvdb_buf_inout      alloc,
     uint                size,
     uint                levels);
 
 
 PVDB_INLINE uint
 pvdb_buddy_alloc_alloc(
-    buddy_alloc3_inout  alloc,
+    pvdb_buf_inout      alloc,
     uint                level);
 
 
 PVDB_INLINE void
 pvdb_buddy_alloc_free(
-    buddy_alloc3_inout  alloc,
+    pvdb_buf_inout      alloc,
     uint                level,
     uint                ptr);
 
@@ -226,42 +194,134 @@ pvdb_buddy_alloc_free(
 
 //region implementation
 
-PVDB_INLINE bool pvdb_buddy_alloc_read_mask(pvdb_buf_in alloc, uint begin, uint i)            { return (alloc[begin+(i>>5u)] & (1u << (i & 31u))) != 0u; }
-PVDB_INLINE bool pvdb_buddy_alloc_write_mask(pvdb_buf_inout alloc, uint begin, uint i, bool on)  {
+#define PVDB_BA_MEMBER_SIZE                 0u
+#define PVDB_BA_MEMBER_LEVELS               1u
+#define PVDB_BA_MEMBER_FREELIST_BEGIN       2u
+#define PVDB_BA_MEMBER_FREELIST_END         (PVDB_BA_MEMBER_FREELIST_BEGIN + PVDB_BA_MAX_LEVELS)
+#define PVDB_BA_MEMBER_USED_BLOCKS          (PVDB_BA_MEMBER_FREELIST_END + PVDB_BA_MAX_LEVELS)
+
+#define pvdb_ba_index_to_ptr(level, i)      ((i) << (level))
+#define pvdb_ba_ptr_to_index(level, ptr)    ((ptr) >> (level))
+#define pvdb_ba_buddy_index(i)              ((i) + (~(i) & 1u) - ((i) & 1u))
+#define pvdb_ba_mask_index(level, i)        ((1u << (level)) + (i) - 1u)
+
+
+//uint    size{};
+//atom_t  freelist_begin[Levels]{};
+//atom_t  freelist_end[Levels]{};
+//atom_t* used_blocks{};
+//atom_t* freelist[Levels]{};
+
+PVDB_INLINE bool pvdb_buddy_alloc_read_mask(pvdb_buf_in alloc, uint begin, uint i) {
+    return (alloc[begin+(i>>5u)] & (1u << (i & 31u))) != 0u;
+}
+
+PVDB_INLINE bool pvdb_buddy_alloc_write_mask(pvdb_buf_inout alloc, uint begin, uint i, uint m) {
     const uint address = begin + (i >> 5u);
-    const uint mask = 1u << (i & 31u);
+    const uint mask = m << (i & 31u);
     const uint current = pvdb_buddy_alloc_at(alloc, address);
-    const uint updated = on ? (current | mask) : (current & ~mask);
+    const uint updated = (m != 0u) ? (current | mask) : (current & ~mask);
     const uint prev = atomicCompSwap(pvdb_buddy_alloc_at(alloc, address), current, updated);
     return prev == current && (current != updated);
+}
+
+PVDB_INLINE bool pvdb_buddy_alloc_is_used(pvdb_buf_in alloc, uint index) {
+    return pvdb_buddy_alloc_read_mask(alloc, PVDB_BA_MEMBER_USED_BLOCKS, index);
+}
+
+PVDB_INLINE void pvdb_buddy_alloc_mark_used(pvdb_buf_inout alloc, uint index) {
+    while (!pvdb_buddy_alloc_write_mask(alloc, PVDB_BA_MEMBER_USED_BLOCKS, index, 1u))
+        ;
+}
+
+PVDB_INLINE void pvdb_buddy_alloc_mark_used2(pvdb_buf_inout alloc, uint index) {
+    while (!pvdb_buddy_alloc_write_mask(alloc, PVDB_BA_MEMBER_USED_BLOCKS, index, 2u))
+        ;
+}
+
+PVDB_INLINE bool pvdb_buddy_alloc_freelist_empty(pvdb_buf_in alloc, uint level) {
+    return false;
+}
+
+PVDB_INLINE void pvdb_buddy_alloc_freelist_insert(pvdb_buf_inout alloc, uint level, uint ptr) {
+
+}
+
+PVDB_INLINE void pvdb_buddy_alloc_freelist_insert2(pvdb_buf_inout alloc, uint level, uint ptr1, uint ptr2) {
+
+}
+
+PVDB_INLINE bool pvdb_buddy_alloc_freelist_try_pop(pvdb_buf_inout alloc, uint level, PVDB_INOUT(uint) ptr) {
+    return false;
 }
 
 
 uint
 pvdb_buddy_alloc_init(
-    buddy_alloc3_in     alloc,
+    pvdb_buf_inout      alloc,
     uint                size,
     uint                levels)
 {
-    return 0;
+    pvdb_buddy_alloc_at(alloc, PVDB_BA_MEMBER_SIZE) = size;
+    pvdb_buddy_alloc_at(alloc, PVDB_BA_MEMBER_LEVELS) = levels;
+    uint total_size = 2u + 2u * PVDB_BA_MAX_LEVELS + (1u + ((size - 1u) / 32u));
+    for (uint l = 0; l < levels; ++l)
+        total_size += size >> l;
+    return total_size;
 }
 
 
 uint
 pvdb_buddy_alloc_alloc(
-    buddy_alloc3_inout  alloc,
+    pvdb_buf_inout      alloc,
     uint                level)
 {
-    return 0;
+    uint ptr = 0;
+    const uint levels = pvdb_buddy_alloc_at(alloc, PVDB_BA_MEMBER_LEVELS);
+    uint current_level = levels - 1u;
+    for (;;) {
+        if (!pvdb_buddy_alloc_freelist_empty(alloc, level) && pvdb_buddy_alloc_freelist_try_pop(alloc, level, ptr))
+            break;
+
+        for (uint l = current_level; l > level; --l) {
+            if (!pvdb_buddy_alloc_freelist_empty(alloc, l) && pvdb_buddy_alloc_freelist_try_pop(alloc, l, ptr)) {
+                pvdb_buddy_alloc_mark_used2(alloc, pvdb_ba_mask_index(l, pvdb_ba_ptr_to_index(l, ptr)));
+                pvdb_buddy_alloc_freelist_insert2(alloc, l-1u, ptr, ptr + (1u << (l-1u)));
+                current_level = l;
+            }
+        }
+    }
+    pvdb_buddy_alloc_mark_used(alloc, pvdb_ba_mask_index(level, pvdb_ba_ptr_to_index(level, ptr)));
+    return ptr;
 }
 
 
 void
 pvdb_buddy_alloc_free(
-    buddy_alloc3_inout  alloc,
+    pvdb_buf_inout      alloc,
     uint                level,
     uint                ptr)
 {
+    uint i = pvdb_ba_ptr_to_index(level, ptr);
+    while (!pvdb_buddy_alloc_is_used(alloc, pvdb_ba_mask_index(level, pvdb_ba_buddy_index(i)))) {
+        const uint parent_index = i & ~1u;
+        if (!pvdb_buddy_alloc_write_mask(alloc, PVDB_BA_MEMBER_USED_BLOCKS, pvdb_ba_mask_index(level, parent_index), 0u))
+            continue;
+        ptr = pvdb_ba_index_to_ptr(level, parent_index);
+        i = parent_index;
+        ++level;
+    }
+    pvdb_buddy_alloc_freelist_insert(alloc, level, ptr);
+
+//    const uint i = pvdb_ba_ptr_to_index(level, ptr);
+//    if (!pvdb_buddy_alloc_is_used(alloc, pvdb_ba_mask_index(level, pvdb_ba_buddy_index(i)))) {
+//        const uint parent_index = i & ~1u;
+//        pvdb_buddy_alloc_freelist_insert(alloc, level + 1u, pvdb_ba_index_to_ptr(level, parent_index));
+//        pvdb_buddy_alloc_mark_free(alloc, pvdb_ba_mask_index(level, parent_index));
+//    } else {
+//        pvdb_buddy_alloc_freelist_insert(alloc, level, ptr);
+//        pvdb_buddy_alloc_mark_free(alloc, pvdb_ba_mask_index(level, i));
+//    }
 }
 
 //endregion
@@ -296,4 +356,3 @@ TEST_CASE("pvdb_mesh", "[pvdb]")
 //        for (uint d = 0; d < 6; ++d)
 //            pvdb_mesh_add_face(meshes, alloc, vertices, 0u, pvdb_vertex_make(1u, i, d, 0u, 0u));
 }
-*/

@@ -6,7 +6,7 @@
 #define PVDB_RAYCAST_H
 
 #include "pvdb_tree_read.h"
-#include "pvdb_math.h"
+#include "../util/pvdb_math.h"
 
 //#define PVDB_RAYCAST_OFFSET
 #define PVDB_RAYCAST_MAX_ITER   256
@@ -47,9 +47,9 @@ pvdb_raycast_leaf(
            && p.x < dim && p.y < dim && p.z < dim)
    {
         const uint i = pvdb_coord_local_to_index(tree, p, 0);
-        if (pvdb_read_node_mask(tree, node, i)) {
+        if (pvdb_tree_read_node_mask(tree, node, i)) {
 //            PVDB_PRINTF("READ LEAF: node: %u, index: %u, xyz: (%d, %d, %d) - HIT\n", node, 0, dda.p.x, dda.p.y, dda.p.z);
-            hit.voxel = pvdb_read_node(tree, 0, node, i);
+            hit.voxel = pvdb_tree_read_node(tree, 0, node, i);
             hit.t = dda.t.x;
             pvdb_dda_next(dda);
             pvdb_dda_step(dda);
@@ -118,9 +118,9 @@ pvdb_raycast(
 
         index = pvdb_coord_local_to_index(tree, p, level);
 
-        if (pvdb_read_node_mask(tree, node, index)) {
+        if (pvdb_tree_read_node_mask(tree, node, index)) {
 //            PVDB_PRINTF("READ: level: %u, node: %u, index: %u, xyz: (%d, %d, %d) - HIT\n", level, node, index, dda.p.x, dda.p.y, dda.p.z);
-            const uint leaf = pvdb_read_node(tree, level, node, index);
+            const uint leaf = pvdb_tree_read_node(tree, level, node, index);
             dda.t.x += PVDB_DDA_FLT_MIN;
             node_pos = pvdb_access_xyz(tree, node_pos, level+1) + (p << int(pvdb_total_log2dim_voxel(tree, level)));
 

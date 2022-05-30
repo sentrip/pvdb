@@ -12,7 +12,7 @@
 #include "pvdb_config.h"
 
 #ifdef PVDB_C
-#include "pvdb_compat_atomic.h"
+#include "compat/pvdb_compat_atomic.h"
 #endif
 
 #ifndef PVDB_C

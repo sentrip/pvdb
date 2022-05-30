@@ -11,7 +11,7 @@
     * PVDB_QUEUE_IMPLEMENTATION - define implementations of queue functions
 */
 
-#include "pvdb_buffer.h"
+#include "../pvdb_buffer.h"
 
 #ifndef PVDB_QUEUE_HEADER
 #define PVDB_QUEUE_HEADER

@@ -5,40 +5,6 @@
 #include "catch.hpp"
 #include "test_gpu_utils.h"
 
-#define PVDB_C
-#include "../pvdb/pvdb_global_test.h"
-PVDB_DEFINE_BUFFER_STORAGE(global_buffer);
-
-using namespace pvdb;
-using namespace pvdb::gpu;
-
-
-static constexpr std::string_view SRC_GLOBAL = R"(#version 450
-#extension GL_EXT_debug_printf : enable
-
-#include "pvdb/pvdb_global_test.h"
-
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-void main(){
-    debugPrintfEXT("\n\tbuffer: %u\n", global_read(0u, 0u));
-    debugPrintfEXT("\n\tconst : %u\n", global_log2dim(0u));
-})";
-
-TEST_CASE("GlobalTest", "[pvdb]")
-{
-    auto& ctx = get_context();
-    GPUTest test{};
-    test.init(ctx, {1u, 0u}, SRC_GLOBAL);
-
-    test.execute(ctx, [](Cmd cmd){
-        cmd.dispatch();
-    });
-
-    test.destroy(ctx);
-    destroy_context(ctx);
-}
-
-/*
 #include "../cvdb/objects/Queue.h"
 
 using namespace pvdb;
@@ -53,7 +19,7 @@ layout(std430, binding = RESULT_BINDING) buffer ResultBuffer { uint data[]; } re
 #define PVDB_QUEUE_NAME     pvdb_queue_ivec4
 #define PVDB_QUEUE_BINDING  2u
 #define PVDB_ARRAY_SIZE     2u
-#include "pvdb/pvdb_queue.glsl"
+#include "pvdb/util/pvdb_queue.glsl"
 
 void pp_step0()
 {
@@ -147,7 +113,7 @@ layout(std430, binding = RESULT_BINDING) buffer ResultBuffer { uint data[]; } re
 #define PVDB_QUEUE_NAME     pvdb_queue_ivec4
 #define PVDB_QUEUE_BINDING  1u
 #define PVDB_ARRAY_SIZE     2u
-#include "pvdb/pvdb_queue.glsl"
+#include "pvdb/util/pvdb_queue.glsl"
 
 layout(push_constant) uniform constants { uint offset; } PC;
 layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
@@ -207,4 +173,3 @@ TEST_CASE("gpu_pvdb_queue_copy", "[pvdb]")
 
     destroy_context(ctx);
 }
-*/

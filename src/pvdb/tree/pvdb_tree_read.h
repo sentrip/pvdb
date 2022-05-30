@@ -21,7 +21,7 @@
 
 /// read value from address
 PVDB_INLINE uint
-pvdb_read_address(
+pvdb_tree_read_address(
     pvdb_tree_in        tree,
     uint                address)
 {
@@ -31,20 +31,18 @@ pvdb_read_address(
 
 /// read bit from address
 PVDB_INLINE bool
-pvdb_read_bit(
+pvdb_tree_read_bit(
     pvdb_tree_in        tree,
     uint                address,
     uint                index)
 {
-    PVDB_ASSERT(index < 32 && "Index out of range");
-    const uint mask = 1u << pvdb_mask_bit_i(index);
-    return (pvdb_tree_at(tree, address) & mask) != 0u;
+    return (pvdb_tree_at(tree, address) & (1u << (index & 31u))) != 0u;
 }
 
 
 /// read value from node
 PVDB_INLINE uint
-pvdb_read_node(
+pvdb_tree_read_node(
     pvdb_tree_in        tree,
     uint                level,
     uint                node,
@@ -57,7 +55,7 @@ pvdb_read_node(
 
 /// read value from node at given channel
 PVDB_INLINE uint
-pvdb_read_node(
+pvdb_tree_read_node(
     pvdb_tree_in        tree,
     uint                level,
     uint                node,
@@ -70,18 +68,18 @@ pvdb_read_node(
 
 /// read node mask
 PVDB_INLINE bool
-pvdb_read_node_mask(
+pvdb_tree_read_node_mask(
     pvdb_tree_in        tree,
     uint                node,
     uint                index)
 {
-    return pvdb_read_bit(tree, node + pvdb_mask_offset(index), index & 31u);
+    return pvdb_tree_read_bit(tree, node + pvdb_mask_offset(index), index & 31u);
 }
 
 
 /// read value from leaf
 PVDB_INLINE uint
-pvdb_read_leaf(
+pvdb_tree_read_leaf(
     pvdb_tree_in        tree,
     uint                leaf,
     PVDB_IN(ivec3)      p)
@@ -93,7 +91,7 @@ pvdb_read_leaf(
 
 /// read value from leaf at given channel
 PVDB_INLINE uint
-pvdb_read_leaf(
+pvdb_tree_read_leaf(
     pvdb_tree_in        tree,
     uint                leaf,
     PVDB_IN(ivec3)      p,
@@ -109,7 +107,7 @@ pvdb_read_leaf(
 
 /// get the parent node of the given node
 PVDB_INLINE uint
-pvdb_get_parent(
+pvdb_tree_get_parent(
     pvdb_tree_in        tree,
     uint                node)
 {
@@ -119,7 +117,7 @@ pvdb_get_parent(
 
 /// get the index in the parent node of the given node
 PVDB_INLINE uint
-pvdb_get_index_in_parent(
+pvdb_tree_get_index_in_parent(
     pvdb_tree_in        tree,
     uint                node)
 {
@@ -128,7 +126,7 @@ pvdb_get_index_in_parent(
 
 /// get entire node header from the given node
 PVDB_INLINE pvdb_node_header
-pvdb_get_node(
+pvdb_tree_get_node(
     pvdb_tree_in        tree,
     uint                node)
 {
@@ -145,7 +143,7 @@ pvdb_get_node(
 
 /// traverse from starting level and record traversed level
 PVDB_INLINE uint
-pvdb_traverse(
+pvdb_tree_traverse(
     pvdb_tree_in        tree,
     uint                node,
     uint                start_level,
@@ -155,7 +153,7 @@ pvdb_traverse(
     const uint target = target_level;
     target_level = start_level;
     for (;;) {
-        const uint next = pvdb_read_node(tree, target_level, node, pvdb_coord_global_to_index(tree, p, target_level));
+        const uint next = pvdb_tree_read_node(tree, target_level, node, pvdb_coord_global_to_index(tree, p, target_level));
         if (next == PVDB_ROOT_NODE) return node;
         if (--target_level == target || pvdb_is_tile(next)) return next;
         node = next;
@@ -166,24 +164,24 @@ pvdb_traverse(
 
 /// traverse and record traversed level
 PVDB_INLINE uint
-pvdb_traverse(
+pvdb_tree_traverse(
     pvdb_tree_in        tree,
     PVDB_INOUT(uint)    level,
     PVDB_IN(ivec3)      p)
 {
-    return pvdb_traverse(tree, PVDB_ROOT_NODE, pvdb_root(tree), level, p);
+    return pvdb_tree_traverse(tree, PVDB_ROOT_NODE, pvdb_root(tree), level, p);
 }
 
 
 /// traverse and record traversed level
 PVDB_INLINE uint
-pvdb_traverse_at_least(
+pvdb_tree_traverse_at_least(
     pvdb_tree_in        tree,
     uint                level,
     PVDB_IN(ivec3)      p)
 {
     const uint l = level;
-    const uint node = pvdb_traverse(tree, level, p);
+    const uint node = pvdb_tree_traverse(tree, level, p);
     if (level != l && !pvdb_is_tile(node)) return PVDB_ROOT_NODE;
     return node;
 }
@@ -194,38 +192,38 @@ pvdb_traverse_at_least(
 
 /// leaf mask at given global coord
 PVDB_INLINE bool
-pvdb_is_on(
+pvdb_tree_is_on(
     pvdb_tree_in        tree,
     PVDB_IN(ivec3)      p)
 {
-    const uint leaf = pvdb_traverse_at_least(tree, 0u, p);
+    const uint leaf = pvdb_tree_traverse_at_least(tree, 0u, p);
     if (leaf == PVDB_ROOT_NODE || pvdb_is_tile(leaf)) return (leaf & PVDB_NODE) != 0u;
-    return pvdb_read_node_mask(tree, leaf, pvdb_coord_global_to_index(tree, p, 0u));
+    return pvdb_tree_read_node_mask(tree, leaf, pvdb_coord_global_to_index(tree, p, 0u));
 }
 
 
 /// leaf value at given global coord
 PVDB_INLINE uint
-pvdb_get(
+pvdb_tree_get(
     pvdb_tree_in        tree,
     PVDB_IN(ivec3)      p)
 {
-    const uint leaf = pvdb_traverse_at_least(tree, 0u, p);
+    const uint leaf = pvdb_tree_traverse_at_least(tree, 0u, p);
     if (leaf == PVDB_ROOT_NODE || pvdb_is_tile(leaf)) return leaf & PVDB_NODE;
-    return pvdb_read_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0u));
+    return pvdb_tree_read_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0u));
 }
 
 
 /// leaf value at given global coord in the given channel
 PVDB_INLINE uint
-pvdb_get(
+pvdb_tree_get(
     pvdb_tree_in        tree,
     PVDB_IN(ivec3)      p,
     uint                channel)
 {
-    const uint leaf = pvdb_traverse_at_least(tree, 0u, p);
+    const uint leaf = pvdb_tree_traverse_at_least(tree, 0u, p);
     if (leaf == PVDB_ROOT_NODE || pvdb_is_tile(leaf)) return leaf & PVDB_NODE;
-    return pvdb_read_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0u), channel);
+    return pvdb_tree_read_leaf(tree, leaf, pvdb_coord_global_to_local(tree, p, 0u), channel);
 }
 
 //endregion

@@ -1,4 +1,4 @@
-#include "pvdb_config.h"
+#include "../pvdb_config.h"
 
 layout (binding = PVDB_BINDING_CAMERA) uniform CameraUniform {
     mat4  mvp;

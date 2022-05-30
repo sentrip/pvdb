@@ -5,7 +5,7 @@
 #ifndef PVDB_MATH_H
 #define PVDB_MATH_H
 
-#include "pvdb_config.h"
+#include "../pvdb_config.h"
 
 //region general
 

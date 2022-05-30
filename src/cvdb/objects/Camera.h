@@ -6,7 +6,7 @@
 #define PVDB_CVDB_CAMERA_H
 
 #include "../fwd.h"
-#include "../../pvdb/pvdb_math.h"
+#include "../../pvdb/util/pvdb_math.h"
 
 #include "../../gpu/Objects.h"
 

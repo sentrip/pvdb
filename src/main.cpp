@@ -53,7 +53,7 @@ int main() {
 #include "cvdb/objects/Camera.h"
 #include "cvdb/Runtime.h"
 #include "cvdb/Debug.h"
-#include "pvdb/pvdb_tree_raycast.h"
+#include "pvdb/tree/pvdb_tree_raycast.h"
 
 
 

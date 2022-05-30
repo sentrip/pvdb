@@ -8,7 +8,7 @@
 #include "../fwd.h"
 
 #define PVDB_QUEUE_HEADER_ONLY
-#include "../../pvdb/pvdb_queue.h"
+#include "../../pvdb/util/pvdb_queue.h"
 
 
 namespace pvdb {

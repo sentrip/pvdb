@@ -9,7 +9,7 @@
 #ifndef PVDB_TREE_H
 #define PVDB_TREE_H
 
-#include "pvdb_buffer.h"
+#include "../pvdb_buffer.h"
 
 //region definitions
 
@@ -98,14 +98,11 @@ struct pvdb_node_header {
 
 /// node math
 #define pvdb_is_tile(n)                             (((n) & PVDB_TILE) != 0u)
-#define pvdb_mask_word_i(i)                         ((i) >> 5u)
-#define pvdb_mask_bit_i(i)                          ((i) & 31u)
-#define pvdb_mask_offset(i)                         (PVDB_HEADER_SIZE + pvdb_mask_word_i(i))
+#define pvdb_mask_offset(i)                         (PVDB_HEADER_SIZE + ((i) >> 5u))
 #define pvdb_mask_size(t, lvl)                      (1u + ((pvdb_dim3(t, lvl) - 1u) >> 5u))
 #define pvdb_data_offset(t, lvl, i)                 (PVDB_HEADER_SIZE + pvdb_mask_size(t, lvl) + (i))
 #define pvdb_data_offset_channel(t, lvl, i, ch)     (PVDB_HEADER_SIZE + pvdb_mask_size(t, lvl) + ((ch) * pvdb_dim3(t, lvl)) + (i))
 #define pvdb_node_size(t, lvl)                      (pvdb_data_offset(t, lvl, 0) + (pvdb_dim3(t, lvl) * pvdb_channels(t, lvl)))
-#define pvdb_leaf_size(t)                           (pvdb_dim3(t, 0) * pvdb_channels(t, 0))
 
 
 /// NOTE: you must call pvdb_allocate_node(tree, pvdb_root(tree)) after initializing to prepare the tree correctly

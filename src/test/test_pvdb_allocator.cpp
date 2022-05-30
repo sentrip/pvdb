@@ -6,7 +6,7 @@
 
 #define PVDB_C
 #define PVDB_ALLOCATOR_MASK
-#include "../pvdb/pvdb_allocator.h"
+#include "../pvdb/util/pvdb_allocator.h"
 
 TEST_CASE("allocator", "[pvdb]")
 {

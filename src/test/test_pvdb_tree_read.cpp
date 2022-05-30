@@ -5,7 +5,7 @@
 #include "catch.hpp"
 
 #define PVDB_C
-#include "../pvdb/pvdb_tree_read.h"
+#include "../pvdb/tree/pvdb_tree_read.h"
 
 template<uint NWords, uint NLevels>
 pvdb_tree make_test_tree_read(pvdb_buf_t<NWords>& buf, PVDB_ARRAY_IN(uint, log2dim, NLevels))
@@ -86,7 +86,7 @@ void test_pvdb_traverse(PVDB_ARRAY_IN(uint, log2dim, NLevels))
         uint end_level = start_level - 1;
         for (;;) {
             uint target_level = end_level;
-            uint result = pvdb_traverse(tree, nodes[start_level], start_level, target_level, {});
+            uint result = pvdb_tree_traverse(tree, nodes[start_level], start_level, target_level, {});
             REQUIRE( result == nodes[end_level] );
             REQUIRE( target_level == end_level );
             if (end_level-- == 0) break;

@@ -6,7 +6,6 @@
 #include "catch.hpp"
 
 #include "../cvdb/objects/Tree.h"
-#include "../pvdb/pvdb_global_test.h"
 
 using namespace pvdb::gpu;
 
@@ -16,7 +15,7 @@ static constexpr std::string_view SRC_SET = R"(#version 450
 
 layout(std430, binding = 3, set = 0) buffer ResultBuffer { uint data[]; } result;
 
-#include "pvdb/pvdb_tree.glsl"
+#include "pvdb/tree/pvdb_tree.glsl"
 
 layout(push_constant) uniform constants {
 	uint count;
@@ -31,13 +30,13 @@ void main() {
         return;
     const ivec3 p = ivec3(gl_GlobalInvocationID * PC.step);
     if (PC.cmd == 0) {
-        pvdb_set(PC.tree, p, uint(p.x * 1000000 + p.y * 1000 + p.z));
+        pvdb_tree_set(PC.tree, p, uint(p.x * 1000000 + p.y * 1000 + p.z));
     } else {
         const uint local_index = pvdb_coord_to_index(gl_LocalInvocationID, 3u);
         const uint global_index = gl_WorkGroupID.x * gl_NumWorkGroups.y * gl_NumWorkGroups.z
             + gl_WorkGroupID.y * gl_NumWorkGroups.z
             + gl_WorkGroupID.z;
-        result.data[local_index + global_index * 512u] = pvdb_get(PC.tree, p);
+        result.data[local_index + global_index * 512u] = pvdb_tree_get(PC.tree, p);
     }
 }
 )";
